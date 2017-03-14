@@ -1,0 +1,4 @@
+[services]
+  [services.1]
+  name="mqtt_handler"
+  addr="0.0.0.0:1883 mqtt"
