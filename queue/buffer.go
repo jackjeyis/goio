@@ -93,6 +93,10 @@ func (b *IOBuffer) Buffer() []byte {
 	return b.buf
 }
 
+func (b *IOBuffer) Byte(cnt uint64) []byte {
+	return b.buf[b.wt+cnt : b.wt+cnt+1]
+}
+
 func (b *IOBuffer) Reset() {
 	b.wt = 0
 	b.rt = 0

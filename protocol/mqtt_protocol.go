@@ -3,9 +3,9 @@ package protocol
 import (
 	"errors"
 
-	"goio/logger"
-	"goio/msg"
-	"goio/queue"
+	"wolfhead/logger"
+	"wolfhead/msg"
+	"wolfhead/queue"
 )
 
 const (
@@ -451,10 +451,33 @@ func (m *MqttProtocol) Encode(msg msg.Message, buf *queue.IOBuffer) error {
 }
 
 func (m *MqttProtocol) Decode(buf *queue.IOBuffer) (msg.Message, error) {
+	var (
+		cnt int = 2
+	)
+	for {
+		if cnt > 5 {
+			return nil, errors.New("extend header size")
+		}
+		if buf.GetReadSize() < uint64(cnt) {
+			continue
+		}
+
+		if buf.Byte(uint64(cnt))[0] >= 0x80 {
+			cnt++
+		} else {
+			break
+		}
+	}
 	msgType, remainLen, err := m.Header.Decode(buf)
 	if err != nil {
 		logger.Error("MqttProtocol.Header.Decode error %v", err)
 		return nil, err
+	}
+
+	for {
+		if uint64(remainLen) <= buf.GetReadSize() {
+			break
+		}
 	}
 	return decodeMessage(msgType, buf, remainLen)
 }
