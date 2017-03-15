@@ -152,6 +152,8 @@ func (s *ServiceChannel) DecodeMessage() (e error) {
 func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
 	if err = s.proto.Encode(msg, s.out); err != nil {
 		logger.Error("s.protocol.Encode error %v", err)
+		//s.conn.Close()
+		return
 	}
 	s.write <- true
 }
