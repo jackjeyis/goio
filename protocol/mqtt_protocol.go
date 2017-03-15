@@ -3,9 +3,9 @@ package protocol
 import (
 	"errors"
 
-	"wolfhead/logger"
-	"wolfhead/msg"
-	"wolfhead/queue"
+	"goio/logger"
+	"goio/msg"
+	"goio/queue"
 )
 
 const (
