@@ -1,7 +1,7 @@
 package msg
 
 import (
-	"wolfhead/queue"
+	"goio/queue"
 )
 
 type Message interface {
