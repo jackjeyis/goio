@@ -20,6 +20,8 @@ var (
 	badReturnCodeErr = errors.New("mqtt: return code is invalid")
 	badPacketErr     = errors.New("mqtt: data exceeds packet length")
 	badMsgLenErr     = errors.New("mqtt: message is too long")
+	HeaderErr        = errors.New("mqtt: header bytes not enough")
+	BodyErr          = errors.New("mqtt: body bytes not enough")
 )
 
 type Qoslevel uint8
@@ -450,16 +452,21 @@ func (m *MqttProtocol) Encode(msg msg.Message, buf *queue.IOBuffer) error {
 	return msg.Encode(buf)
 }
 
+var head bool
+
 func (m *MqttProtocol) Decode(buf *queue.IOBuffer) (msg.Message, error) {
 	var (
-		cnt int = 2
+		cnt       int = 2
+		msgType   MsgType
+		remainLen int32
+		err       error
 	)
 	for {
 		if cnt > 5 {
 			return nil, errors.New("extend header size")
 		}
 		if buf.GetReadSize() < uint64(cnt) {
-			continue
+			return nil, HeaderErr
 		}
 
 		if buf.Byte(uint64(cnt))[0] >= 0x80 {
@@ -468,17 +475,19 @@ func (m *MqttProtocol) Decode(buf *queue.IOBuffer) (msg.Message, error) {
 			break
 		}
 	}
-	msgType, remainLen, err := m.Header.Decode(buf)
-	if err != nil {
-		logger.Error("MqttProtocol.Header.Decode error %v", err)
-		return nil, err
-	}
 
-	for {
-		if uint64(remainLen) <= buf.GetReadSize() {
-			break
+	if !head {
+		msgType, remainLen, err = m.Header.Decode(buf)
+		if err != nil {
+			logger.Error("MqttProtocol.Header.Decode error %v", err)
+			return nil, err
 		}
 	}
+	if uint64(remainLen) < buf.GetReadSize() {
+		head = true
+		return nil, BodyErr
+	}
+	head = false
 	return decodeMessage(msgType, buf, remainLen)
 }
 

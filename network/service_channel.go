@@ -96,6 +96,12 @@ L:
 		s.in.Produce(uint64(n))
 		err = s.DecodeMessage()
 		if err != nil {
+			if err == protocol.HeaderErr || err == protocol.BodyErr {
+				continue
+			}
+
+			logger.Info("Decode error %v", err)
+			s.OnClose()
 			return
 		}
 	}
@@ -139,8 +145,6 @@ func (s *ServiceChannel) DecodeMessage() (e error) {
 	for s.in.GetReadSize() > 0 && e == nil {
 		m, e = s.proto.Decode(s.in)
 		if e != nil {
-			logger.Info("Decode error %v", e)
-			s.OnClose()
 			return e
 		}
 		m.Protocol(msg.NewProtocolMessage(s))
