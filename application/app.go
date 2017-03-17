@@ -198,7 +198,7 @@ func (app *GenericApplication) WritePidFile() (err error) {
 
 func (app *GenericApplication) StartLogger() (err error) {
 	if app.logger_config == "" {
-		logger.Start(logger.LogFilePath("./log"), logger.EveryHour, logger.PrintStack, logger.AlsoStdout)
+		logger.Start( /*logger.LogFilePath("./log"),*/ logger.EveryHour, logger.PrintStack)
 	} else {
 
 	}
@@ -218,10 +218,6 @@ func (app *GenericApplication) LoadConfig() (err error) {
 
 func (app *GenericApplication) StartIOService() (err error) {
 	/*if err = app.io_service.Init(app.io_service_config); err != nil {
-		return err
-	}
-	*/
-	/*if err = app.io_service.Start(); err != nil {
 		return err
 	}
 	*/

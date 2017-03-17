@@ -62,7 +62,7 @@ func (s *ServiceChannel) GetAttr(key string) string {
 
 func (s *ServiceChannel) Start() {
 	go s.OnRead()
-	s.OnWrite()
+	go s.OnWrite()
 }
 
 func (s *ServiceChannel) OnRead() {

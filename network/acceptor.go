@@ -6,7 +6,6 @@ import (
 	"goio/protocol"
 	"goio/service"
 	"net"
-	"sync"
 	"time"
 )
 
@@ -17,7 +16,6 @@ type Acceptor struct {
 	ln         *net.TCPListener
 	proto      protocol.Protocol
 	quit       chan struct{}
-	wg         *sync.WaitGroup
 }
 
 func NewAcceptor(io_srv *service.IOService, srv msg.Service, address string, proto protocol.Protocol) *Acceptor {
@@ -27,7 +25,6 @@ func NewAcceptor(io_srv *service.IOService, srv msg.Service, address string, pro
 		addr:       address,
 		proto:      proto,
 		quit:       make(chan struct{}),
-		wg:         &sync.WaitGroup{},
 	}
 }
 
@@ -46,14 +43,10 @@ func (a *Acceptor) Start() {
 		return
 	}
 
-	//a.ln.SetDeadline(time.Now().Add(10 * time.Second))
-
 	var (
 		conn  *net.TCPConn
 		delay time.Duration
 	)
-
-	//var JobQueue chan msg.ProtocolMessage
 
 	for {
 		conn, err = a.ln.AcceptTCP()
@@ -82,7 +75,7 @@ func (a *Acceptor) Start() {
 			return
 		}
 
-		//conn.SetReadDeadline(time.Now().Add(6 * time.Second))
+		conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 		serviceChannel := NewServiceChannel(
 			conn,
 			a.proto,
@@ -91,29 +84,12 @@ func (a *Acceptor) Start() {
 			a.quit,
 		)
 
-		a.wg.Add(1)
-		go func(serviceChannel *ServiceChannel) {
-			serviceChannel.Start()
-			a.wg.Done()
-		}(serviceChannel)
+		serviceChannel.Start()
 
-		/*	msg := &ProtocolMessage{
-				channel: serviceChannel,
-			}
-
-			JobQueue <- msg
-
-			dispacther := &Dispathcher{
-				queue: JobQueue,
-			}
-
-			dispacther.Run()
-		*/
 	}
 }
 
 func (a *Acceptor) Stop() {
 	a.ln.Close()
 	close(a.quit)
-	a.wg.Wait()
 }
