@@ -34,7 +34,9 @@ type ServiceChannel struct {
 	attrs      map[string]string
 }
 
-func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol, io_srv *service.IOService, srv msg.Service, q chan struct{}) *ServiceChannel {
+func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol,
+	io_srv *service.IOService, srv msg.Service,
+	q chan struct{}) *ServiceChannel {
 	return &ServiceChannel{
 		in:         queue.NewIOBuffer(),
 		out:        queue.NewIOBuffer(),
@@ -102,7 +104,7 @@ L:
 
 			logger.Info("Decode error %v", err)
 			s.OnClose()
-			return
+			break L
 		}
 	}
 	s.DecodeMessage()
@@ -114,15 +116,8 @@ func (s *ServiceChannel) OnWrite() {
 		s.out.Reset()
 	}()
 
-	for {
+	for s.out.GetReadSize() > 0 {
 		select {
-		case <-s.write:
-			n, err = s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
-			if n <= 0 || err != nil {
-				s.conn.CloseWrite()
-				return
-			}
-			s.out.Consume(uint64(n))
 		case <-s.quit:
 			if s.out.GetReadSize() > 0 {
 				continue
@@ -137,7 +132,15 @@ func (s *ServiceChannel) OnWrite() {
 				s.conn.CloseWrite()
 				return
 			}
+		default:
 		}
+
+		n, err = s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
+		if n <= 0 || err != nil {
+			s.conn.CloseWrite()
+			return
+		}
+		s.out.Consume(uint64(n))
 	}
 }
 
@@ -159,7 +162,6 @@ func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
 		//s.conn.Close()
 		return
 	}
-	s.write <- true
 }
 
 func (s *ServiceChannel) Service() msg.Service {
