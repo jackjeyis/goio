@@ -18,7 +18,7 @@ func NewServiceHandler() *ServiceHandler {
 
 func (sh *ServiceHandler) Handle(msg msg.Message) {
 	logger.Info("Service Handle")
-	msg.ProtoMsg().Serve(msg)
+	msg.Channel().Serve(msg)
 }
 
 type IOHandler struct {
@@ -30,5 +30,5 @@ func NewIOHandler() *IOHandler {
 
 func (ih *IOHandler) Handle(msg msg.Message) {
 	logger.Info("IO handle")
-	msg.ProtoMsg().EncodeMessage(msg)
+	msg.Channel().EncodeMessage(msg)
 }

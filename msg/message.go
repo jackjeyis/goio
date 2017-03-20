@@ -7,8 +7,8 @@ import (
 type Message interface {
 	IOMessage
 	Type() uint8
-	Protocol(*ProtocolMessage)
-	ProtoMsg() *ProtocolMessage
+	SetChannel(Channel)
+	Channel() Channel
 }
 
 type IOMessage interface {

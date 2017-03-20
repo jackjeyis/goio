@@ -7,5 +7,7 @@ type Channel interface {
 	OnClose()
 	DecodeMessage() error
 	EncodeMessage(Message)
-	Service() Service
+	Serve(Message)
+	SetAttr(key, value string)
+	GetAttr(string) string
 }

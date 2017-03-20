@@ -150,7 +150,7 @@ func (s *ServiceChannel) DecodeMessage() (e error) {
 		if e != nil {
 			return e
 		}
-		m.Protocol(msg.NewProtocolMessage(s))
+		m.SetChannel(s)
 		s.io_service.GetServiceStage().Send(m)
 	}
 	return nil
@@ -164,8 +164,8 @@ func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
 	}
 }
 
-func (s *ServiceChannel) Service() msg.Service {
-	return s.service
+func (s *ServiceChannel) Serve(msg msg.Message) {
+	s.service.Serve(msg)
 }
 
 func (s *ServiceChannel) OnClose() {

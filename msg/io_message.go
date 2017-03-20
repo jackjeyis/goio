@@ -15,7 +15,7 @@ func (m *ProtocolMessage) Type() uint8 {
 }
 
 func (m *ProtocolMessage) Serve(msg Message) {
-	m.channel.Service().Serve(msg)
+	m.channel.Serve(msg)
 }
 
 func (m *ProtocolMessage) EncodeMessage(msg Message) {

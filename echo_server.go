@@ -4,6 +4,7 @@ import (
 	"goio/application"
 	"goio/logger"
 	"goio/msg"
+	"goio/network"
 	pb "goio/proto"
 	"goio/protocol"
 
@@ -17,14 +18,12 @@ func main() {
 			switch msg := msg.(type) {
 			case *protocol.MqttConnect:
 				logger.Info("connect success!")
+				network.Register(msg.ClientId, msg.Channel())
 				m := &protocol.MqttConnAck{}
-				m.Protocol(msg.ProtoMsg())
+				m.SetChannel(network.GetSession(msg.ClientId))
 				app.GetIOService().GetIOStage().Send(m)
-				//msg.ClientId
-				//sessionManager.Register(msg.ClientId, msg.channel)
 			case *protocol.MqttPublish:
 				logger.Info("publish %v", msg)
-				//m, ok := msg.(*protocol.MqttPublish)
 				submit := &pb.Submit{}
 				err := proto.Unmarshal(msg.Topic, submit)
 				if err != nil {
@@ -35,7 +34,7 @@ func main() {
 			case *protocol.MqttPingReq:
 				logger.Info("ping req")
 				m := &protocol.MqttPingRes{}
-				m.Protocol(msg.ProtoMsg())
+				m.SetChannel(msg.Channel())
 				app.GetIOService().GetIOStage().Send(m)
 
 			}

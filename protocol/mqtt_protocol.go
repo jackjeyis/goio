@@ -147,7 +147,7 @@ func writeHeader(b *queue.IOBuffer, h *Header, variableHeader *queue.ByteBuffer,
 }
 
 type MqttConnect struct {
-	protoMsg        *msg.ProtocolMessage
+	channel         msg.Channel
 	ProtocolName    string
 	ProtocolVersion uint8
 	CleanSession    bool
@@ -168,12 +168,12 @@ func (c *MqttConnect) Type() uint8 {
 	return uint8(Connect)
 }
 
-func (c *MqttConnect) Protocol(m *msg.ProtocolMessage) {
-	c.protoMsg = m
+func (c *MqttConnect) SetChannel(ch msg.Channel) {
+	c.channel = ch
 }
 
-func (c *MqttConnect) ProtoMsg() *msg.ProtocolMessage {
-	return c.protoMsg
+func (c *MqttConnect) Channel() msg.Channel {
+	return c.channel
 }
 
 func (c *MqttConnect) Decode(b *queue.IOBuffer, remainLen int32) (err error) {
@@ -235,21 +235,22 @@ func (c *MqttConnect) Encode(b *queue.IOBuffer) error {
 }
 
 type MqttConnAck struct {
-	protoMsg *msg.ProtocolMessage
-	RetCode  ReturnCode
+	channel msg.Channel
+	RetCode ReturnCode
 }
 
 func (c *MqttConnAck) Type() uint8 {
 	return uint8(ConnAck)
 }
 
-func (c *MqttConnAck) Protocol(m *msg.ProtocolMessage) {
-	c.protoMsg = m
+func (c *MqttConnAck) SetChannel(ch msg.Channel) {
+	c.channel = ch
 }
 
-func (c *MqttConnAck) ProtoMsg() *msg.ProtocolMessage {
-	return c.protoMsg
+func (c *MqttConnAck) Channel() msg.Channel {
+	return c.channel
 }
+
 func (c *MqttConnAck) Encode(b *queue.IOBuffer) error {
 	buf := queue.Get()
 	buf.WriteByte(byte(0))
@@ -274,7 +275,7 @@ func (c *MqttConnAck) Decode(b *queue.IOBuffer, remainLen int32) error {
 }
 
 type MqttPublish struct {
-	protoMsg *msg.ProtocolMessage
+	channel msg.Channel
 	Header
 	Topic   []byte
 	MsgId   uint16
@@ -285,12 +286,12 @@ func (p *MqttPublish) Type() uint8 {
 	return uint8(Publish)
 }
 
-func (p *MqttPublish) Protocol(m *msg.ProtocolMessage) {
-	p.protoMsg = m
+func (p *MqttPublish) SetChannel(ch msg.Channel) {
+	p.channel = ch
 }
 
-func (c *MqttPublish) ProtoMsg() *msg.ProtocolMessage {
-	return c.protoMsg
+func (p *MqttPublish) Channel() msg.Channel {
+	return p.channel
 }
 
 func (p *MqttPublish) Encode(b *queue.IOBuffer) error {
@@ -320,20 +321,20 @@ func (p *MqttPublish) Decode(b *queue.IOBuffer, remainLen int32) error {
 }
 
 type MqttPubAck struct {
-	protoMsg *msg.ProtocolMessage
-	MsgId    uint16
+	channel msg.Channel
+	MsgId   uint16
 }
 
 func (p *MqttPubAck) Type() uint8 {
 	return uint8(PubAck)
 }
 
-func (p *MqttPubAck) Protocol(m *msg.ProtocolMessage) {
-	p.protoMsg = m
+func (p *MqttPubAck) SetChannel(ch msg.Channel) {
+	p.channel = ch
 }
 
-func (c *MqttPubAck) ProtoMsg() *msg.ProtocolMessage {
-	return c.protoMsg
+func (p *MqttPubAck) Channel() msg.Channel {
+	return p.channel
 }
 
 func (p *MqttPubAck) Encode(b *queue.IOBuffer) error {
@@ -356,19 +357,19 @@ func (p *MqttPubAck) Decode(b *queue.IOBuffer, remainLen int32) error {
 }
 
 type MqttPingReq struct {
-	protoMsg *msg.ProtocolMessage
+	channel msg.Channel
 }
 
 func (p *MqttPingReq) Type() uint8 {
 	return uint8(PingReq)
 }
 
-func (p *MqttPingReq) Protocol(m *msg.ProtocolMessage) {
-	p.protoMsg = m
+func (p *MqttPingReq) SetChannel(ch msg.Channel) {
+	p.channel = ch
 }
 
-func (c *MqttPingReq) ProtoMsg() *msg.ProtocolMessage {
-	return c.protoMsg
+func (p *MqttPingReq) Channel() msg.Channel {
+	return p.channel
 }
 
 func (p *MqttPingReq) Encode(b *queue.IOBuffer) error {
@@ -387,19 +388,19 @@ func (p *MqttPingReq) Decode(b *queue.IOBuffer, remainLen int32) error {
 }
 
 type MqttPingRes struct {
-	protoMsg *msg.ProtocolMessage
+	channel msg.Channel
 }
 
 func (p *MqttPingRes) Type() uint8 {
 	return uint8(PingRes)
 }
 
-func (p *MqttPingRes) Protocol(m *msg.ProtocolMessage) {
-	p.protoMsg = m
+func (p *MqttPingRes) SetChannel(ch msg.Channel) {
+	p.channel = ch
 }
 
-func (c *MqttPingRes) ProtoMsg() *msg.ProtocolMessage {
-	return c.protoMsg
+func (p *MqttPingRes) Channel() msg.Channel {
+	return p.channel
 }
 
 func (p *MqttPingRes) Encode(b *queue.IOBuffer) error {
@@ -418,19 +419,19 @@ func (p *MqttPingRes) Decode(b *queue.IOBuffer, remainLen int32) error {
 }
 
 type MqttDisConnect struct {
-	protoMsg *msg.ProtocolMessage
+	channel msg.Channel
 }
 
 func (c *MqttDisConnect) Type() uint8 {
 	return uint8(DisConnect)
 }
 
-func (c *MqttDisConnect) Protocol(m *msg.ProtocolMessage) {
-	c.protoMsg = m
+func (c *MqttDisConnect) SetChannel(ch msg.Channel) {
+	c.channel = ch
 }
 
-func (c *MqttDisConnect) ProtoMsg() *msg.ProtocolMessage {
-	return c.protoMsg
+func (c *MqttDisConnect) Channel() msg.Channel {
+	return c.channel
 }
 
 func (c *MqttDisConnect) Encode(b *queue.IOBuffer) error {
