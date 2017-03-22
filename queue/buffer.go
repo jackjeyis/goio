@@ -64,8 +64,17 @@ func (b *IOBuffer) Write(bs []byte) {
 }
 
 func (b *IOBuffer) Read(n uint64) []byte {
-	buffer := b.buf[b.rt : b.rt+n]
-	b.Consume(n)
+	var (
+		end    uint64
+		buffer []byte
+	)
+	if n > b.GetReadSize() {
+		buffer = b.buf[b.rt:]
+		b.Consume(b.GetReadSize())
+	} else {
+		buffer := b.buf[b.rt : b.rt+n]
+		b.Consume(n)
+	}
 	return buffer
 }
 
