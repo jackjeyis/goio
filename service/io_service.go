@@ -15,12 +15,14 @@ type Stage interface {
 }
 
 type ServiceStage struct {
-	stage      *Dispatcher
-	srv_handle *ServiceHandler
+	stage        *Dispatcher
+	srv_handle   *ServiceHandler
+	worker_count int
+	queue_size   int
 }
 
 func (ss *ServiceStage) Start() {
-	ss.stage = NewDispatcher(2, 10000)
+	ss.stage = NewDispatcher(ss.worker_count, ss.queue_size)
 	ss.srv_handle = NewServiceHandler()
 	ss.stage.Run(ss.srv_handle)
 }
@@ -40,12 +42,14 @@ func (ss *ServiceStage) Send(msg msg.Message) {
 }
 
 type IOStage struct {
-	stage     *Dispatcher
-	io_handle *IOHandler
+	stage        *Dispatcher
+	io_handle    *IOHandler
+	worker_count int
+	queue_size   int
 }
 
 func (io *IOStage) Start() {
-	io.stage = NewDispatcher(2, 10000)
+	io.stage = NewDispatcher(io.worker_count, io.queue_size)
 	io.io_handle = NewIOHandler()
 	io.stage.Run(io.io_handle)
 }
@@ -64,15 +68,27 @@ func (io *IOStage) Send(msg msg.Message) {
 	}
 }
 
+type IOServiceConfig struct {
+	Srvworker int
+	Srvqueue  int
+
+	Ioworker int
+	Ioqueue  int
+}
+
 type IOService struct {
 	service_stage *ServiceStage
 	io_stage      *IOStage
 }
 
+func (s *IOService) Init(c IOServiceConfig) error {
+	s.service_stage = &ServiceStage{worker_count: c.Srvworker, queue_size: c.Srvqueue}
+	s.io_stage = &IOStage{worker_count: c.Ioworker, queue_size: c.Ioqueue}
+	return nil
+}
+
 func (s *IOService) Start() {
-	s.service_stage = &ServiceStage{}
 	s.service_stage.Start()
-	s.io_stage = &IOStage{}
 	s.io_stage.Start()
 }
 

@@ -35,6 +35,7 @@ type GenericApplication struct {
 	on_start       DelegateFunc
 	on_stop        DelegateFunc
 	on_finish      DelegateFunc
+	app_config     string
 }
 
 func (app *GenericApplication) SetOnStart(fn DelegateFunc) *GenericApplication {
@@ -78,6 +79,7 @@ func (app *GenericApplication) RegisterService(name string, fn func(msg.Message)
 }
 
 func (app *GenericApplication) Run() (err error) {
+	flag.Parse()
 	if err = app.Start(); err != nil {
 		logger.Info("Run error %v", err)
 		return err
@@ -97,10 +99,10 @@ func (app *GenericApplication) Run() (err error) {
 }
 
 func (app *GenericApplication) Start() (err error) {
-	/*	if err = ParseCmd(); err != nil {
-			return nil
-		}
-
+	if err = app.ParseCmd(); err != nil {
+		return nil
+	}
+	/*
 		if help_mode || version_mode {
 			return nil
 		}
@@ -166,8 +168,9 @@ func (app *GenericApplication) Stop() (err error) {
 	return nil
 }
 
-func (app *GenericApplication) ParseCmd() {
-
+func (app *GenericApplication) ParseCmd() error {
+	app.app_config = *app_config
+	return nil
 }
 
 func (app *GenericApplication) InitApp() (err error) {
@@ -206,22 +209,21 @@ func (app *GenericApplication) StartLogger() (err error) {
 }
 
 func (app *GenericApplication) LoadConfig() (err error) {
-	/*if app.app_config == "" {
-
+	if app.app_config != "" {
+		app.config_manager = NewConfigManager(app.app_config)
+		logger.Info("app conf path %s", app.config_manager.conf)
 	} else {
 
-	}*/
-	app.config_manager = NewConfigManager("./conf.toml")
-	logger.Info("app conf path %s", app.config_manager.conf)
+	}
 	return nil
 }
 
 func (app *GenericApplication) StartIOService() (err error) {
-	/*if err = app.io_service.Init(app.io_service_config); err != nil {
+	app.io_service = app.GetIOService()
+	if err = app.io_service.Init(app.config_manager.GetIOServiceConfig()); err != nil {
 		return err
 	}
-	*/
-	app.io_service = app.GetIOService()
+
 	app.io_service.HandleSignal()
 	app.io_service.Start()
 	return nil

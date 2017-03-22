@@ -2,3 +2,9 @@
   [services.1]
   name="mqtt_handler"
   addr="0.0.0.0:1883 mqtt"
+
+[engine]
+srvworker=100000
+srvqueue=100000
+ioworker=100000
+ioqueue=100000
