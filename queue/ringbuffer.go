@@ -4,7 +4,7 @@ import "errors"
 
 type Item struct {
 	id   uint64
-	data interface{}
+	Data interface{}
 }
 
 type RingBuffer struct {

@@ -93,11 +93,11 @@ func (d *Dispatcher) Run(h Handler) {
 
 func (d *Dispatcher) Stop() {
 	if d.status != DISPATCHER_STOPPED {
+		d.status = DISPATCHER_STOPPED
 		close(d.queue)
 		for _, worker := range d.workers {
 			worker.Stop()
 		}
-		d.status = DISPATCHER_STOPPED
 		close(d.workerPool)
 	}
 }

@@ -59,7 +59,7 @@ func (b *IOBuffer) Write(bs []byte) {
 	if err != nil {
 		return
 	}
-	copy(b.buf[wstart:], bs)
+	copy(b.buf[wstart:wstart+size], bs)
 	b.Produce(size)
 }
 

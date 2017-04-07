@@ -4,7 +4,9 @@
   addr="0.0.0.0:1883 mqtt"
 
 [engine]
-srvworker=100000
+srvworker=10000
 srvqueue=100000
-ioworker=100000
+ioworker=10000
 ioqueue=100000
+matrixbucket=16
+matrixsize=524288

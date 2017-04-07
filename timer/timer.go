@@ -11,8 +11,8 @@ import (
 
 type Timer struct {
 	last_process_time int64
-	per_tick          int
-	total_ticks       int64
+	per_tick          uint64
+	total_ticks       uint64
 	wheel             *TimingWheel
 	ctrie             *util.Ctrie
 	timer_id          uint64
@@ -26,11 +26,11 @@ func (t *Timer) Incrment() uint64 {
 	return atomic.AddUint64(&t.timer_id, 1)
 }
 
-func NewTimer(milli_per_tick int, ticks int64) *Timer {
+func NewTimer(milli_per_tick uint64, ticks uint64) *Timer {
 	timer := &Timer{
 		per_tick:          milli_per_tick,
 		total_ticks:       ticks,
-		last_process_time: time.Now().Unix(),
+		last_process_time: time.Now().UnixNano() / 1000000,
 		ctrie:             util.New(nil),
 	}
 	pool = sync.Pool{
@@ -51,9 +51,9 @@ func ToBytes(id uint64) []byte {
 
 func (t *Timer) AddTimer(milliseconds int64, data interface{}) uint64 {
 	tid := t.Incrment()
-	node := &TimingNode{}
+	node := &TimingNode{data: data}
 	t.ctrie.Insert(ToBytes(tid), node)
-	node.ticks = (time.Now().Unix() - t.last_process_time + milliseconds) / (int64)(t.per_tick)
+	node.ticks = (uint64)(time.Now().UnixNano()/1000000-t.last_process_time+milliseconds) / t.per_tick
 	if node.ticks > t.total_ticks {
 		node.ticks = 1
 	}
@@ -75,8 +75,8 @@ func (t *Timer) CancelTimer(timer_id uint64) error {
 }
 
 func (t *Timer) ProcessTimer() *TimingNode {
-	current_process_time := time.Now().Unix()
-	ticks := (int64)((current_process_time - t.last_process_time) / (int64)(t.per_tick))
+	current_process_time := time.Now().UnixNano() / 1000000
+	ticks := (uint64)(current_process_time-t.last_process_time) / t.per_tick
 	if ticks == 0 {
 		return nil
 	}
@@ -89,7 +89,7 @@ func (t *Timer) ProcessTimer() *TimingNode {
 	return t.wheel.Advance(ticks)
 }
 
-func (t *Timer) BuildWheel(total_ticks int64) {
+func (t *Timer) BuildWheel(total_ticks uint64) {
 	t.wheel = NewTimingWheel(256, nil)
 	total_ticks >>= 8
 	current := t.wheel

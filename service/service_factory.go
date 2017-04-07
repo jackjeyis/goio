@@ -1,6 +1,7 @@
 package service
 
 import (
+	"goio/matrix"
 	"goio/msg"
 	"sync"
 )
@@ -11,7 +12,9 @@ type GenericService struct {
 }
 
 func (s *GenericService) Serve(msg msg.Message) {
+	scope := matrix.NewMatrixScope(s.name)
 	s.serve(msg)
+	scope.Scope()
 }
 
 type ServiceFactory struct {

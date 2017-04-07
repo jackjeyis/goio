@@ -75,7 +75,7 @@ func (a *Acceptor) Start() {
 			return
 		}
 
-		conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
+		//conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 		serviceChannel := NewServiceChannel(
 			conn,
 			a.proto,

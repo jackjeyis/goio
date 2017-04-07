@@ -114,9 +114,10 @@ func (s *ServiceChannel) OnWrite() {
 	var n int
 	defer func() {
 		s.out.Reset()
+		close(s.write)
 	}()
 
-	for s.out.GetReadSize() > 0 {
+	for {
 		select {
 		case <-s.quit:
 			if s.out.GetReadSize() > 0 {
@@ -132,15 +133,15 @@ func (s *ServiceChannel) OnWrite() {
 				s.conn.CloseWrite()
 				return
 			}
-		default:
-		}
+		case <-s.write:
 
-		n, err = s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
-		if n <= 0 || err != nil {
-			s.conn.CloseWrite()
-			return
+			n, err = s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
+			if n <= 0 || err != nil {
+				s.conn.CloseWrite()
+				return
+			}
+			s.out.Consume(uint64(n))
 		}
-		s.out.Consume(uint64(n))
 	}
 }
 
@@ -162,6 +163,7 @@ func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
 		//s.conn.Close()
 		return
 	}
+	s.write <- true
 }
 
 func (s *ServiceChannel) Serve(msg msg.Message) {

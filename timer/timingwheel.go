@@ -8,9 +8,25 @@ import (
 
 type TimingNode struct {
 	next   *TimingNode
-	ticks  int64
+	ticks  uint64
 	active bool
 	data   interface{}
+}
+
+func (tn *TimingNode) Next() *TimingNode {
+	return tn.next
+}
+
+func (tn *TimingNode) SetData(data interface{}) {
+	tn.data = data
+}
+
+func (tn *TimingNode) Data() interface{} {
+	return tn.data
+}
+
+func (tn *TimingNode) Active() bool {
+	return tn.active
 }
 
 type TimingWheel struct {
@@ -29,7 +45,7 @@ func NewTimingWheel(slot uint64, next *TimingWheel) *TimingWheel {
 		return nil
 	}
 	timingWheel := &TimingWheel{
-		current_slot: 0,
+		current_slot: 1,
 		slots:        ring,
 		next_shift:   Log2(slot),
 		self_shift:   0,
@@ -45,17 +61,17 @@ func (tw *TimingWheel) BindNext(next *TimingWheel) {
 		return
 	}
 	tw.next = next
-	next.self_shift = tw.self_shift + tw.next_shift
+	tw.next.self_shift = tw.self_shift + tw.next_shift
 }
 
 func Log2(slot uint64) (n uint8) {
-	for ; slot > 0; slot >>= 2 {
+	for slot >>= 1; slot > 0; slot >>= 1 {
 		n++
 	}
 	return n
 }
 
-func (tw *TimingWheel) Advance(ticks int64) *TimingNode {
+func (tw *TimingWheel) Advance(ticks uint64) *TimingNode {
 	if ticks == 0 {
 		return nil
 	}
@@ -64,6 +80,7 @@ func (tw *TimingWheel) Advance(ticks int64) *TimingNode {
 		head      *TimingNode
 		tail      *TimingNode
 		slot_head *TimingNode
+		ok        bool
 	)
 
 	for ticks > 0 {
@@ -71,8 +88,12 @@ func (tw *TimingWheel) Advance(ticks int64) *TimingNode {
 		if tw.slots.Index(tw.current_slot) == 0 {
 			tw.PullNext()
 		}
-		slot_head = tw.slots.At(tw.current_slot).data.(*TimingNode)
-		tw.slots.At(tw.current_slot).data = nil
+		if tw.slots.At(tw.current_slot).Data != nil {
+			slot_head, ok = tw.slots.At(tw.current_slot).Data.(*TimingNode)
+			if ok {
+				tw.slots.At(tw.current_slot).Data = nil
+			}
+		}
 		head = LinkList(&head, &tail, slot_head)
 		ticks--
 	}
@@ -81,10 +102,14 @@ func (tw *TimingWheel) Advance(ticks int64) *TimingNode {
 
 func (tw *TimingWheel) AddNode(ticks uint64, node *TimingNode) error {
 	var tick_slot uint64
-	if ticks < tw.slots.Size() {
-		tick_slot = tw.current_slot + node.ticks
-		n, ok := slots.At(tick_slot).data.(*TimingNode)
-		slots.At(tick_slot).data = LinkNode(n, node)
+	if ticks <= tw.slots.Size() {
+		tick_slot = tw.current_slot + ticks
+		n, ok := tw.slots.At(tick_slot).Data.(*TimingNode)
+		if ok {
+			tw.slots.At(tick_slot).Data = LinkNode(n, node)
+		} else {
+			tw.slots.At(tick_slot).Data = node
+		}
 	} else {
 		if tw.next != nil {
 			var (
@@ -93,14 +118,15 @@ func (tw *TimingWheel) AddNode(ticks uint64, node *TimingNode) error {
 				loop        uint64
 			)
 			remain_slot = tw.slots.Size() - tw.slots.Index(tw.current_slot)
-			offset = (ticks - remain_slot) * tw.mask
-			loop = (ticks + slots.Index(tw.current_slot)) >> tw.next_shift
+			offset = (ticks - remain_slot) & tw.mask
+			loop = (ticks + tw.slots.Index(tw.current_slot)) >> tw.next_shift
 			node.ticks = (node.ticks & ^(tw.mask << tw.self_shift)) | offset<<tw.self_shift
 			tw.next.AddNode(loop, node)
 		} else {
 			return errors.New("TimingWheel OverFlow!")
 		}
 	}
+	return nil
 }
 
 func (tw *TimingWheel) PullNext() {
@@ -110,8 +136,8 @@ func (tw *TimingWheel) PullNext() {
 	head := tw.next.Advance(1)
 	for head != nil {
 		next := head.next
-		var ticks uint32
-		ticks = (head.ticks >> tw.self_shif) * tw.mask
+		var ticks uint64
+		ticks = (head.ticks >> tw.self_shift) & tw.mask
 		tw.AddNode(ticks, head)
 		head = next
 	}
@@ -136,7 +162,7 @@ func LinkList(head, tail **TimingNode, link_node *TimingNode) *TimingNode {
 		*head = link_node
 		*tail = GetTail(link_node)
 	} else {
-		*tail.next = link_node
+		(*tail).next = link_node
 		*tail = GetTail(link_node)
 	}
 	return *head

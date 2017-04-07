@@ -1,6 +1,7 @@
 package service
 
 import (
+	"goio/matrix"
 	"goio/msg"
 	"os"
 	"os/signal"
@@ -74,6 +75,9 @@ type IOServiceConfig struct {
 
 	Ioworker int
 	Ioqueue  int
+
+	Matrixbucket int
+	Matrixsize   int
 }
 
 type IOService struct {
@@ -82,6 +86,7 @@ type IOService struct {
 }
 
 func (s *IOService) Init(c IOServiceConfig) error {
+	matrix.Init(uint32(c.Matrixbucket), uint64(c.Matrixsize))
 	s.service_stage = &ServiceStage{worker_count: c.Srvworker, queue_size: c.Srvqueue}
 	s.io_stage = &IOStage{worker_count: c.Ioworker, queue_size: c.Ioqueue}
 	return nil
