@@ -1,24 +1,24 @@
 package queue
 
-import "strconv"
+import (
+	"errors"
+	"goio/logger"
+	"strconv"
+)
 
 type IOBuffer struct {
 	buf  []byte
 	wt   uint64
 	rt   uint64
 	size uint64
+	init bool
 }
 
-func NewIOBuffer() *IOBuffer {
-	return &IOBuffer{}
+func NewIOBuffer(it bool) *IOBuffer {
+	return &IOBuffer{init: it}
 }
 
 func (b *IOBuffer) EnsureWrite(size uint64) (uint64, error) {
-	remain_bytes := b.size - b.wt
-	if remain_bytes >= size {
-		return b.wt, nil
-	}
-
 	data_bytes := b.wt - b.rt
 	if b.rt >= size {
 		if data_bytes == 0 {
@@ -32,6 +32,10 @@ func (b *IOBuffer) EnsureWrite(size uint64) (uint64, error) {
 			return b.wt, nil
 		}
 	}
+	remain_bytes := b.size - b.wt
+	if remain_bytes >= size {
+		return b.wt, nil
+	}
 
 	for b.size < b.wt+size {
 		if b.size == 0 {
@@ -42,25 +46,30 @@ func (b *IOBuffer) EnsureWrite(size uint64) (uint64, error) {
 	}
 
 	if b.size > 0xFFFFFFFF {
-		return 0, nil
+		return 0, errors.New("Buffer Overflow")
 	}
 
 	buffer := make([]byte, b.size)
-	if b.buf != nil {
+	if len(b.buf) != 0 {
 		copy(buffer, b.buf[:])
 	}
 	b.buf = buffer
 	return b.wt, nil
 }
 
-func (b *IOBuffer) Write(bs []byte) {
+func (b *IOBuffer) Write(bs []byte) error {
 	size := uint64(len(bs))
+	if size == 0 {
+		return nil
+	}
 	wstart, err := b.EnsureWrite(size)
 	if err != nil {
-		return
+		return err
 	}
+	logger.Info("Write wt %v,rt %v,size %v", b.wt, b.rt, size)
 	copy(b.buf[wstart:wstart+size], bs)
 	b.Produce(size)
+	return nil
 }
 
 func (b *IOBuffer) Read(n uint64) []byte {
@@ -101,13 +110,26 @@ func (b *IOBuffer) Buffer() []byte {
 	return b.buf
 }
 
-func (b *IOBuffer) Byte(cnt uint64) []byte {
-	return b.buf[b.wt+cnt : b.wt+cnt+1]
+func (b *IOBuffer) Len() uint64 {
+	return uint64(len(b.buf))
+}
+
+func (b *IOBuffer) Byte(cnt uint64) byte {
+	return b.buf[b.rt+cnt-1]
 }
 
 func (b *IOBuffer) Reset() {
 	b.wt = 0
 	b.rt = 0
+	b.buf = nil
+}
+
+func (b *IOBuffer) Init() bool {
+	return b.init
+}
+
+func (b *IOBuffer) SetInit(init bool) {
+	b.init = init
 }
 
 func (b *IOBuffer) Summary() string {

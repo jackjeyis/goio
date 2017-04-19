@@ -37,8 +37,10 @@ func (ss *ServiceStage) Stop() {
 }
 
 func (ss *ServiceStage) Send(msg msg.Message) {
-	if ss.stage.status == DISPATCHER_STARTED {
-		ss.stage.queue <- msg
+	select {
+	case <-ss.stage.stop:
+		return
+	case ss.stage.queue <- msg:
 	}
 }
 
@@ -64,8 +66,10 @@ func (io *IOStage) Stop() {
 }
 
 func (io *IOStage) Send(msg msg.Message) {
-	if io.stage.status == DISPATCHER_STARTED {
-		io.stage.queue <- msg
+	select {
+	case <-io.stage.stop:
+		return
+	case io.stage.queue <- msg:
 	}
 }
 
@@ -108,6 +112,7 @@ func (s *IOService) CleanUp() {
 
 func (s *IOService) Stop() {
 	s.service_stage.Stop()
+	matrix.Stop()
 }
 
 func (s *IOService) GetServiceStage() Stage {

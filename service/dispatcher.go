@@ -27,6 +27,7 @@ type Dispatcher struct {
 	maxWorkers int
 	workers    []*Worker
 	status     byte
+	stop       chan struct{}
 }
 
 func NewWorker(pool chan chan msg.Message, h Handler) *Worker {
@@ -78,6 +79,7 @@ func NewDispatcher(maxWorkers, maxQueue int) *Dispatcher {
 		workerPool: make(chan chan msg.Message, maxWorkers),
 		maxWorkers: maxWorkers,
 		workers:    make([]*Worker, maxWorkers),
+		stop:       make(chan struct{}),
 	}
 }
 
@@ -94,6 +96,7 @@ func (d *Dispatcher) Run(h Handler) {
 func (d *Dispatcher) Stop() {
 	if d.status != DISPATCHER_STOPPED {
 		d.status = DISPATCHER_STOPPED
+		close(d.stop)
 		close(d.queue)
 		for _, worker := range d.workers {
 			worker.Stop()
@@ -120,6 +123,8 @@ func (d *Dispatcher) Dispatch() {
 					}
 				}(m)
 			}
+		case <-d.stop:
+			return
 		}
 	}
 }

@@ -1,9 +1,6 @@
 package service
 
-import (
-	"goio/logger"
-	"goio/msg"
-)
+import "goio/msg"
 
 type Handler interface {
 	Handle(msg.Message)
@@ -17,7 +14,6 @@ func NewServiceHandler() *ServiceHandler {
 }
 
 func (sh *ServiceHandler) Handle(msg msg.Message) {
-	logger.Info("Service Handle")
 	msg.Channel().Serve(msg)
 }
 
@@ -29,6 +25,5 @@ func NewIOHandler() *IOHandler {
 }
 
 func (ih *IOHandler) Handle(msg msg.Message) {
-	logger.Info("IO handle")
 	msg.Channel().EncodeMessage(msg)
 }

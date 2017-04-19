@@ -6,6 +6,7 @@ import (
 	"goio/logger"
 	"goio/msg"
 	"goio/queue"
+	"sync"
 )
 
 const (
@@ -82,10 +83,6 @@ func (retCode ReturnCode) IsValid() bool {
 	return retCode >= RetCodeAccepted && retCode < 255
 }
 
-type MqttProtocol struct {
-	Header
-}
-
 type Header struct {
 	msgType  MsgType
 	retain   bool
@@ -93,16 +90,13 @@ type Header struct {
 	qosLevel Qoslevel
 }
 
-func (h *Header) Decode(b *queue.IOBuffer) (msgType MsgType, remainLen int32, err error) {
-	defer func() {
-		if p := recover(); p != nil {
-			err = p.(error)
-		}
-	}()
-
+func (h *Header) Decode(b *queue.IOBuffer) (remainLen int32, err error) {
 	temp := b.Read(uint64(1))
-	msgType = MsgType(temp[0] & 0xF0 >> 4)
+	if len(temp) != 1 {
+		return -1, BodyErr
+	}
 	*h = Header{
+		msgType:  MsgType(temp[0] & 0xF0 >> 4),
 		retain:   temp[0]&0x01 > 0,
 		dupflag:  temp[0]&0x08 > 0,
 		qosLevel: Qoslevel(temp[0] & 0x06 >> 1),
@@ -139,8 +133,16 @@ func writeHeader(b *queue.IOBuffer, h *Header, variableHeader *queue.ByteBuffer,
 	if err != nil {
 		return err
 	}
-	b.Write(buf.Bytes())
-	b.Write(variableHeader.Bytes())
+	err = b.Write(buf.Bytes())
+	if err != nil {
+		return err
+	}
+
+	err = b.Write(variableHeader.Bytes())
+	if err != nil {
+		return err
+	}
+
 	queue.Put(buf)
 	queue.Put(variableHeader)
 	return nil
@@ -294,7 +296,11 @@ func (p *MqttPublish) Channel() msg.Channel {
 	return p.channel
 }
 
+var mutex sync.Mutex
+
 func (p *MqttPublish) Encode(b *queue.IOBuffer) error {
+	mutex.Lock()
+	mutex.Unlock()
 	buf := queue.Get()
 	setBytes(p.Topic, buf)
 	if p.Header.qosLevel.IsMsgId() {
@@ -449,61 +455,71 @@ func (c *MqttDisConnect) Decode(b *queue.IOBuffer, remainLen int32) error {
 	return nil
 }
 
+type MqttProtocol struct {
+	Header
+	remainLen int32
+}
+
 func (m *MqttProtocol) Encode(msg msg.Message, buf *queue.IOBuffer) error {
 	return msg.Encode(buf)
 }
 
-var head bool
-
 func (m *MqttProtocol) Decode(buf *queue.IOBuffer) (msg.Message, error) {
 	var (
 		cnt       int = 2
-		msgType   MsgType
 		remainLen int32
 		err       error
 	)
-	for {
-		if cnt > 5 {
-			return nil, errors.New("extend header size")
-		}
-		if buf.GetReadSize() < uint64(cnt) {
-			return nil, HeaderErr
+	if buf.Init() {
+		for {
+			if cnt > 5 {
+				return nil, errors.New("extend header size")
+			}
+			if buf.GetReadSize() < uint64(cnt) {
+				return nil, HeaderErr
+			}
+
+			//logger.Info("cnt %v,size %v,wt %v,rt %v", cnt, buf.GetReadSize(), buf.GetWrite(), buf.GetRead())
+			if buf.Byte(uint64(cnt)) >= 0x80 {
+				cnt++
+			} else {
+				break
+			}
 		}
 
-		if buf.Byte(uint64(cnt))[0] >= 0x80 {
-			cnt++
-		} else {
-			break
-		}
 	}
 
-	if !head {
-		msgType, remainLen, err = m.Header.Decode(buf)
-		if err != nil {
-			logger.Error("MqttProtocol.Header.Decode error %v", err)
-			return nil, err
-		}
+	if buf.Init() {
+		remainLen, err = m.Header.Decode(buf)
+		buf.SetInit(false)
+	} else {
+		remainLen = m.remainLen
 	}
-	if uint64(remainLen) < buf.GetReadSize() {
-		head = true
+	//logger.Info("uint64 rlen %v,remainLen %v,size %v,cnt %v", uint64(remainLen), remainLen, buf.GetReadSize(), cnt)
+	if uint64(remainLen) > buf.GetReadSize() {
+		logger.Info("remainLen %v,size  %v", remainLen, buf.GetReadSize())
+		m.remainLen = remainLen
 		return nil, BodyErr
 	}
-	head = false
-	return decodeMessage(msgType, buf, remainLen)
+	if err != nil {
+		logger.Error("MqttProtocol.Header.Decode error %v", err)
+		return nil, err
+	}
+	return decodeMessage(m.Header, buf, remainLen)
 }
 
-func decodeMessage(msgType MsgType, b *queue.IOBuffer, remainLen int32) (msg msg.Message, err error) {
-	switch msgType {
+func decodeMessage(header Header, b *queue.IOBuffer, remainLen int32) (msg msg.Message, err error) {
+	switch header.msgType {
 	case Connect:
-		msg = new(MqttConnect)
+		msg = &MqttConnect{}
 	case ConnAck:
-		msg = new(MqttConnAck)
+		msg = &MqttConnAck{}
 	case Publish:
-		msg = new(MqttPublish)
+		msg = &MqttPublish{Header: header}
 	case PubAck:
-		msg = new(MqttPubAck)
+		msg = &MqttPubAck{}
 	case PingReq:
-		msg = new(MqttPingReq)
+		msg = &MqttPingReq{}
 	default:
 		return nil, errors.New("Unknown MsgType")
 	}

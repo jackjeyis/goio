@@ -40,6 +40,10 @@ func Init(bucket uint32, size uint64) error {
 	return nil
 }
 
+func Stop() {
+	atomic.StoreUint64(&collector.running, 0)
+}
+
 func SendToCollector(item *MatrixItem) error {
 	if err := collector.Send(item); err != nil {
 		logger.Warn("SendToCollector Error %v", err)
@@ -121,7 +125,7 @@ func NewMatrixState(start int64, per bool) *MatrixState {
 	return &MatrixState{
 		start_sec:    start,
 		persistent:   per,
-		distribution: make([]int64, 10000),
+		distribution: make([]int64, kTotalBucket),
 		child:        make(map[string]*MatrixState),
 	}
 }
@@ -350,7 +354,7 @@ func (m *MatrixCollector) Start() error {
 	smap := NewMatrixStateMap()
 	go func() {
 		for atomic.LoadUint64(&m.running) > 0 {
-			if (time.Now().UnixNano()/1000000 - smap.start_sec) > 30 {
+			if (time.Now().UnixNano()/1000000 - smap.GetStartTime()) > 30 {
 				logger.Info("MatrixCollector:\n %v", smap.SimpleString())
 				smap = NewMatrixStateMap()
 			}
@@ -358,7 +362,7 @@ func (m *MatrixCollector) Start() error {
 			for i = 0; i != m.bucket; i++ {
 				m.ProcessQueue(m.queue[i], smap)
 			}
-			time.Sleep(2000 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 		}
 		logger.Info("MatrixCollector Exit")
 	}()
