@@ -5,6 +5,7 @@ type Channel interface {
 	OnRead()
 	OnWrite()
 	OnClose()
+	Close()
 	DecodeMessage() error
 	EncodeMessage(Message)
 	Serve(Message)

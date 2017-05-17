@@ -92,9 +92,6 @@ type Header struct {
 
 func (h *Header) Decode(b *queue.IOBuffer) (remainLen int32, err error) {
 	temp := b.Read(uint64(1))
-	if len(temp) != 1 {
-		return -1, BodyErr
-	}
 	*h = Header{
 		msgType:  MsgType(temp[0] & 0xF0 >> 4),
 		retain:   temp[0]&0x01 > 0,
@@ -475,11 +472,10 @@ func (m *MqttProtocol) Decode(buf *queue.IOBuffer) (msg.Message, error) {
 			if cnt > 5 {
 				return nil, errors.New("extend header size")
 			}
-			if buf.GetReadSize() < uint64(cnt) {
+			if buf.GetReadSize() < uint64(cnt+1) {
 				return nil, HeaderErr
 			}
 
-			//logger.Info("cnt %v,size %v,wt %v,rt %v", cnt, buf.GetReadSize(), buf.GetWrite(), buf.GetRead())
 			if buf.Byte(uint64(cnt)) >= 0x80 {
 				cnt++
 			} else {
@@ -495,7 +491,6 @@ func (m *MqttProtocol) Decode(buf *queue.IOBuffer) (msg.Message, error) {
 	} else {
 		remainLen = m.remainLen
 	}
-	//logger.Info("uint64 rlen %v,remainLen %v,size %v,cnt %v", uint64(remainLen), remainLen, buf.GetReadSize(), cnt)
 	if uint64(remainLen) > buf.GetReadSize() {
 		logger.Info("remainLen %v,size  %v", remainLen, buf.GetReadSize())
 		m.remainLen = remainLen

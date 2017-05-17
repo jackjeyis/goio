@@ -115,13 +115,13 @@ func (b *IOBuffer) Len() uint64 {
 }
 
 func (b *IOBuffer) Byte(cnt uint64) byte {
-	return b.buf[b.rt+cnt-1]
+	return b.buf[b.rt+cnt]
 }
 
 func (b *IOBuffer) Reset() {
 	b.wt = 0
 	b.rt = 0
-	b.buf = nil
+	b.buf = b.buf[:0]
 }
 
 func (b *IOBuffer) Init() bool {

@@ -17,6 +17,7 @@ func Instance() *ProtocolFactory {
 			protocol_: make(map[string]Protocol),
 		}
 		pf.Register("mqtt", new(MqttProtocol))
+		pf.Register("barrage", new(BarrageProtocol))
 	})
 	return pf
 }

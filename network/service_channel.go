@@ -131,7 +131,6 @@ func (s *ServiceChannel) OnWrite() {
 
 		default:
 			/*if s.out.GetReadSize() > 0 {
-				//logger.Info("wt %v,rt %v,cap %v,size %v", s.out.GetWrite(), s.out.GetRead(), s.out.Len(), s.out.GetReadSize())
 				n, err = s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
 				if n < 0 || err != nil {
 					s.conn.CloseWrite()
@@ -139,6 +138,8 @@ func (s *ServiceChannel) OnWrite() {
 				}
 				s.out.Consume(uint64(n))
 			}
+
+			logger.Info("wt %v,rt %v,cap %v,size %v", s.out.GetWrite(), s.out.GetRead(), s.out.Len(), s.out.GetReadSize())
 			*/
 			m, err := s.queue.Get()
 			if err != nil {
@@ -181,12 +182,12 @@ func (s *ServiceChannel) DecodeMessage() error {
 }
 
 func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
-	//logger.Info("msg %v", msg)
 	/*if err := s.proto.Encode(msg, s.out); err != nil {
 		logger.Error("s.protocol.Encode error %v", err)
 		s.conn.Close()
 		return
 	}*/
+	logger.Info("msg %v", msg)
 	s.queue.Put(msg)
 }
 
@@ -196,4 +197,8 @@ func (s *ServiceChannel) Serve(msg msg.Message) {
 
 func (s *ServiceChannel) OnClose() {
 	close(s.close)
+}
+
+func (s *ServiceChannel) Close() {
+	s.conn.Close()
 }

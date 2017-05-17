@@ -2,6 +2,9 @@
   [services.1]
   name="mqtt_handler"
   addr="0.0.0.0:1883 mqtt"
+  [services.2]
+  name="barrage_handler"
+  addr="0.0.0.0:8080 barrage"
 
 [engine]
 srvworker=10000

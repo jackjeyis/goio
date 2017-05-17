@@ -52,6 +52,33 @@ func main() {
 
 			}
 		})
+		app.RegisterService("barrage_handler", func(msg msg.Message) {
+			barrage, ok := msg.(*protocol.Barrage)
+			if !ok {
+				return
+			}
+			if msg.Channel().GetAttr("status") != "OK" {
+				if barrage.Op != 7 {
+					logger.Info("handshake fail %v", barrage)
+					msg.Channel().Close()
+					return
+				}
+				logger.Info("auth %v", string(barrage.Body))
+				msg.Channel().SetAttr("status", "OK")
+				barrage.Body = nil
+				barrage.Op = 8
+				app.GetIOService().GetIOStage().Send(barrage)
+			}
+			switch barrage.Op {
+			case 2:
+				barrage.Op = 3
+				app.GetIOService().GetIOStage().Send(barrage)
+			case 4:
+				barrage.Op = 5
+				app.GetIOService().GetIOStage().Send(barrage)
+			}
+		})
 		return nil
 	}).Run()
+
 }

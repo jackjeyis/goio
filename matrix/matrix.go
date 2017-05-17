@@ -33,10 +33,10 @@ func Init(bucket uint32, size uint64) error {
 		return errors.New("size not 2 pow!")
 	}
 	collector = NewMatrixCollector(bucket, size)
-	if err := collector.Start(); err != nil {
+	/*if err := collector.Start(); err != nil {
 		logger.Info("collector.Start Error %v", err)
 		return err
-	}
+	}*/
 	return nil
 }
 

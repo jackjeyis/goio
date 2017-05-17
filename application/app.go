@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"runtime/trace"
 	"strconv"
 	"sync"
 
@@ -78,6 +79,20 @@ func (app *GenericApplication) RegisterService(name string, fn func(msg.Message)
 	service.Instance().RegisterService(name, fn)
 }
 
+func (app *GenericApplication) Monitor() {
+	f, err := os.Create("trace.out")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	err = trace.Start(f)
+	if err != nil {
+		panic(err)
+	}
+	defer trace.Stop()
+}
+
 func (app *GenericApplication) Run() (err error) {
 	flag.Parse()
 	if err = app.Start(); err != nil {
@@ -85,6 +100,7 @@ func (app *GenericApplication) Run() (err error) {
 		return err
 	}
 
+	app.Monitor()
 	/*if help_mode || version_mode {
 		return nil
 	}
@@ -99,6 +115,7 @@ func (app *GenericApplication) Run() (err error) {
 }
 
 func (app *GenericApplication) Start() (err error) {
+
 	if err = app.ParseCmd(); err != nil {
 		return nil
 	}
