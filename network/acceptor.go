@@ -6,6 +6,7 @@ import (
 	"goio/protocol"
 	"goio/service"
 	"net"
+	"runtime"
 	"time"
 )
 
@@ -42,6 +43,13 @@ func (a *Acceptor) Start() {
 		logger.Error("net.ListenTCP fail")
 		return
 	}
+
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go acceptTCP(a.ln)
+	}
+}
+
+func acceptTCP(ln *net.TCPListener) {
 
 	var (
 		conn  *net.TCPConn
@@ -88,7 +96,6 @@ func (a *Acceptor) Start() {
 
 	}
 }
-
 func (a *Acceptor) Stop() {
 	a.ln.Close()
 	close(a.quit)
