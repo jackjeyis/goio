@@ -123,7 +123,7 @@ func NewBarrageProtocol() *BarrageProtocol {
 }
 
 func (b *BarrageProtocol) Encode(msg msg.Message, buf *queue.IOBuffer) error {
-	pool.Put(msg)
+	//pool.Put(msg)
 	return msg.Encode(buf)
 }
 
@@ -156,8 +156,9 @@ func (b *BarrageProtocol) Decode(buf *queue.IOBuffer) (msg.Message, error) {
 
 func decodeBarrageMessage(header BarrageHeader, b *queue.IOBuffer, rLen int32) (msg.Message, error) {
 
-	barrage, _ := pool.Get().(*Barrage)
-	barrage.BarrageHeader = header
+	//barrage, _ := pool.Get().(*Barrage)
+	//barrage.BarrageHeader = header
+	barrage := &Barrage{BarrageHeader: header}
 	err := barrage.Decode(b, rLen)
 	return barrage, err
 }

@@ -45,15 +45,16 @@ func (a *Acceptor) Start() {
 	}
 
 	for i := 0; i < runtime.NumCPU(); i++ {
-		go acceptTCP(a.ln)
+		go acceptTCP(a)
 	}
 }
 
-func acceptTCP(ln *net.TCPListener) {
+func acceptTCP(a *Acceptor) {
 
 	var (
 		conn  *net.TCPConn
 		delay time.Duration
+		err error
 	)
 
 	for {
