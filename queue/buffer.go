@@ -2,7 +2,6 @@ package queue
 
 import (
 	"errors"
-	"goio/logger"
 	"strconv"
 )
 
@@ -66,7 +65,7 @@ func (b *IOBuffer) Write(bs []byte) error {
 	if err != nil {
 		return err
 	}
-	logger.Info("Write wt %v,rt %v,size %v", b.wt, b.rt, size)
+	//logger.Info("Write wt %v,rt %v,size %v", b.wt, b.rt, size)
 	copy(b.buf[wstart:wstart+size], bs)
 	b.Produce(size)
 	return nil
