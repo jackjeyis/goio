@@ -157,7 +157,7 @@ func (s *ServiceChannel) OnWrite() {
 					return
 				}
 				s.out.Consume(uint64(n))
-				logger.Info("n %v,wt %v,rt %v,cap %v,size %v", n, s.out.GetWrite(), s.out.GetRead(), s.out.Len(), s.out.GetReadSize())
+				//logger.Info("n %v,wt %v,rt %v,cap %v,size %v", n, s.out.GetWrite(), s.out.GetRead(), s.out.Len(), s.out.GetReadSize())
 			}
 		}
 
@@ -187,7 +187,6 @@ func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
 		s.conn.Close()
 		return
 	}*/
-	logger.Info("msg %v", msg)
 	s.queue.Put(msg)
 }
 
