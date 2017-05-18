@@ -6,6 +6,7 @@ import (
 	"goio/msg"
 	"goio/queue"
 	"goio/util/binary"
+	"sync"
 )
 
 const (
@@ -33,6 +34,7 @@ const (
 var (
 	ErrPackLen   = errors.New("server codec pack length error!")
 	ErrHeaderLen = errors.New("server codec header length error!")
+	pool         *sync.Pool
 )
 
 type BarrageHeader struct {
@@ -111,7 +113,17 @@ type BarrageProtocol struct {
 	rLen int32
 }
 
+func NewBarrageProtocol() *BarrageProtocol {
+	pool = &sync.Pool{
+		New: func() interface{} {
+			return &Barrage{}
+		},
+	}
+	return &BarrageProtocol{}
+}
+
 func (b *BarrageProtocol) Encode(msg msg.Message, buf *queue.IOBuffer) error {
+	pool.Put(msg)
 	return msg.Encode(buf)
 }
 
@@ -143,7 +155,9 @@ func (b *BarrageProtocol) Decode(buf *queue.IOBuffer) (msg.Message, error) {
 }
 
 func decodeBarrageMessage(header BarrageHeader, b *queue.IOBuffer, rLen int32) (msg.Message, error) {
-	barrage := &Barrage{BarrageHeader: header}
+
+	barrage, _ := pool.Get().(*Barrage)
+	barrage.BarrageHeader = header
 	err := barrage.Decode(b, rLen)
 	return barrage, err
 }
