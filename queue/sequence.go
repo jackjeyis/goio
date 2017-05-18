@@ -155,4 +155,5 @@ func (s *Sequence) Reset() {
 	s.consume = 0
 	s.mask = 0
 	s.nodes = s.nodes[:0]
+	s.disposed = 1
 }
