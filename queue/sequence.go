@@ -149,3 +149,10 @@ func (s *Sequence) Cap() uint64 {
 func (s *Sequence) Disposed() bool {
 	return atomic.CompareAndSwapUint64(&s.disposed, 1, 0)
 }
+
+func (s *Sequence) Reset() {
+	s.produce = 0
+	s.consume = 0
+	s.mask = 0
+	s.nodes = s.nodes[:0]
+}

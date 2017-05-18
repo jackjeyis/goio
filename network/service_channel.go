@@ -17,9 +17,9 @@ const (
 )
 
 type ServiceChannel struct {
-	close      chan struct{}
-	quit       chan struct{}
-	write      chan bool
+	close chan struct{}
+	quit  chan struct{}
+	//write      chan bool
 	in         *queue.IOBuffer
 	out        *queue.IOBuffer
 	conn       *net.TCPConn
@@ -42,9 +42,9 @@ func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol,
 		proto:      proto,
 		io_service: io_srv,
 		service:    srv,
-		write:      make(chan bool, 10000),
-		quit:       q,
-		queue:      queue.NewSequence(1024 * 1024),
+		//write:      make(chan bool, 10000),
+		quit:  q,
+		queue: queue.NewSequence(4096),
 	}
 }
 
@@ -71,9 +71,10 @@ func (s *ServiceChannel) OnRead() {
 		n   int
 	)
 	defer func() {
-		s.conn.CloseRead()
 		s.in.Reset()
+		s.queue.Reset()
 		s.OnClose()
+		s.conn.CloseRead()
 	}()
 L:
 	for {
@@ -113,6 +114,7 @@ func (s *ServiceChannel) OnWrite() {
 	)
 	defer func() {
 		s.out.Reset()
+		s.queue.Reset()
 		close(s.write)
 	}()
 
