@@ -158,7 +158,7 @@ func main() {
 			switch barrage.Op {
 			case 2:
 				barrage.Op = 3
-				barrage.Channel().SetDeadline(6)
+				barrage.Channel().SetDeadline(240)
 				barrage.Channel().GetIOService().Serve(barrage)
 			case 4:
 				network.BroadcastRoom(barrage.Channel().GetAttr("rid").(string), barrage.Channel().GetAttr("cid").(string), barrage.Body)
