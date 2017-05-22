@@ -12,4 +12,8 @@ srvqueue=100000
 ioworker=10000
 ioqueue=100000
 matrixbucket=16
-matrixsize=524288
+matrixsize=1024
+#524288
+
+[http]
+addr="0.0.0.0:7172"

@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+type Leave struct {
+	Cid  string
+	Rid  string
+	Body []byte
+}
+
+var Disconn chan *Leave
+
 type Acceptor struct {
 	io_service *service.IOService
 	service    msg.Service
@@ -20,6 +28,7 @@ type Acceptor struct {
 }
 
 func NewAcceptor(io_srv *service.IOService, srv msg.Service, address string, proto protocol.Protocol) *Acceptor {
+	Disconn = make(chan *Leave, 100)
 	return &Acceptor{
 		io_service: io_srv,
 		service:    srv,
@@ -54,7 +63,7 @@ func acceptTCP(a *Acceptor) {
 	var (
 		conn  *net.TCPConn
 		delay time.Duration
-		err error
+		err   error
 	)
 
 	for {

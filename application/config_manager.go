@@ -29,9 +29,14 @@ func NewConfigManager(config string) *ConfigManager {
 
 type SrvInfo map[string]serviceInfo
 
+type HttpConfig struct {
+	Addr string
+}
+
 type ServicesConfig struct {
 	Services SrvInfo
 	Engine   service.IOServiceConfig
+	Http     HttpConfig
 }
 
 type serviceInfo struct {
@@ -45,4 +50,8 @@ func (c *ConfigManager) GetServicesConfig() SrvInfo {
 
 func (c *ConfigManager) GetIOServiceConfig() service.IOServiceConfig {
 	return c.ServicesConfig.Engine
+}
+
+func (c *ConfigManager) GetHttpConfig() HttpConfig {
+	return c.ServicesConfig.Http
 }

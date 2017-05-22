@@ -105,6 +105,10 @@ func (s *IOService) Run() {
 	s.service_stage.Wait()
 }
 
+func (s *IOService) Serve(msg msg.Message) {
+	s.io_stage.Send(msg)
+}
+
 func (s *IOService) CleanUp() {
 	s.io_stage.Stop()
 	s.io_stage.Wait()

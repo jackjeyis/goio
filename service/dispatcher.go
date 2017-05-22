@@ -114,11 +114,11 @@ func (d *Dispatcher) Wait() {
 func (d *Dispatcher) Dispatch() {
 	for {
 		select {
-		case m, ok := <-d.queue:
-			if ok {
+		case m := <-d.queue:
+			if m != nil {
 				go func(msg msg.Message) {
-					jobChannel, ok := <-d.workerPool
-					if ok {
+					jobChannel := <-d.workerPool
+					if jobChannel != nil {
 						jobChannel <- msg
 					}
 				}(m)

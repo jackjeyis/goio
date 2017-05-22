@@ -79,6 +79,10 @@ func (app *GenericApplication) RegisterService(name string, fn func(msg.Message)
 	service.Instance().RegisterService(name, fn)
 }
 
+func (app *GenericApplication) GetConfigManager() *ConfigManager {
+	return app.config_manager
+}
+
 func (app *GenericApplication) Monitor() {
 	f, err := os.Create("trace.out")
 	if err != nil {

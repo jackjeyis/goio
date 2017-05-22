@@ -37,6 +37,14 @@ var (
 	pool         *sync.Pool
 )
 
+type Notify struct {
+	Id   string `json:"id"`
+	Ct   int    `json:"ct"`
+	Rid  int32  `json:"roomId"`
+	Uid  int64  `json:"fromId"`
+	Code int8   `json:"code"`
+}
+
 type BarrageHeader struct {
 	Ver int16
 	Op  int32

@@ -3,6 +3,7 @@ package network
 import (
 	"io"
 	"net"
+	"time"
 
 	"goio/logger"
 	"goio/msg"
@@ -17,16 +18,15 @@ const (
 )
 
 type ServiceChannel struct {
-	close chan struct{}
-	quit  chan struct{}
-	//write      chan bool
+	close      chan struct{}
+	quit       chan struct{}
 	in         *queue.IOBuffer
 	out        *queue.IOBuffer
 	conn       *net.TCPConn
 	proto      protocol.Protocol
 	io_service *service.IOService
 	service    msg.Service
-	attrs      map[string]string
+	attrs      map[string]interface{}
 	queue      *queue.Sequence
 }
 
@@ -38,25 +38,24 @@ func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol,
 		out:        queue.NewIOBuffer(false),
 		conn:       conn,
 		close:      make(chan struct{}),
-		attrs:      make(map[string]string),
+		attrs:      make(map[string]interface{}),
 		proto:      proto,
 		io_service: io_srv,
 		service:    srv,
-		//write:      make(chan bool, 10000),
-		quit:  q,
-		queue: queue.NewSequence(4096),
+		quit:       q,
+		queue:      queue.NewSequence(4096),
 	}
 }
 
-func (s *ServiceChannel) SetAttr(key, value string) {
+func (s *ServiceChannel) SetAttr(key string, value interface{}) {
 	s.attrs[key] = value
 }
 
-func (s *ServiceChannel) GetAttr(key string) string {
+func (s *ServiceChannel) GetAttr(key string) interface{} {
 	if attr, ok := s.attrs[key]; ok {
 		return attr
 	}
-	return ""
+	return nil
 }
 
 func (s *ServiceChannel) Start() {
@@ -71,9 +70,14 @@ func (s *ServiceChannel) OnRead() {
 		n   int
 	)
 	defer func() {
-		s.in.Reset()
+		if s.GetAttr("status") == "OK" {
+			cid := s.GetAttr("cid").(string)
+			rid := s.GetAttr("rid").(string)
+			UnRegister(cid, rid)
+			NotifyHost(rid, 0)
+		}
 		s.OnClose()
-		//s.queue.Reset()
+		s.in.Reset()
 		s.conn.CloseRead()
 	}()
 L:
@@ -114,8 +118,6 @@ func (s *ServiceChannel) OnWrite() {
 	)
 	defer func() {
 		s.out.Reset()
-		//s.queue.Reset()
-		//close(s.write)
 	}()
 
 	for {
@@ -124,12 +126,12 @@ func (s *ServiceChannel) OnWrite() {
 			s.conn.Close()
 			return
 		case <-s.close:
-			//if s.out.GetReadSize() > 0 {
+			if s.out.GetReadSize() > 0 {
 				continue
-			//} else {
+			} else {
 				s.conn.CloseWrite()
 				return
-			//}
+			}
 
 		default:
 			/*if s.out.GetReadSize() > 0 {
@@ -189,16 +191,19 @@ func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
 		s.conn.Close()
 		return
 	}*/
-	select {
-		case <-s.close:
-			return
-		default:
-	}
 	s.queue.Put(msg)
 }
 
 func (s *ServiceChannel) Serve(msg msg.Message) {
 	s.service.Serve(msg)
+}
+
+func (s *ServiceChannel) GetIOService() msg.Service {
+	return s.io_service
+}
+
+func (s *ServiceChannel) SetDeadline(timestamp int) {
+	s.conn.SetReadDeadline(time.Now().Add(time.Duration(timestamp) * time.Second))
 }
 
 func (s *ServiceChannel) OnClose() {
