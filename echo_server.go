@@ -103,6 +103,11 @@ func main() {
 					barrage.Channel().Close()
 					return
 				}
+				if auth.Rid == 0 || auth.Cid == "" || auth.Token == "" {
+					logger.Error("param invalid")
+					barrage.Channel().Close()
+					return
+				}
 				barrage.Op = 8
 				rid := strconv.FormatInt(auth.Rid, 10)
 				res, err := hp.Get("http://172.16.6.135:8998/im/" + rid + "/_check?token=" + auth.Token)
