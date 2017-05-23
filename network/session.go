@@ -24,6 +24,7 @@ func init() {
 
 type Bucket struct {
 	buckets []*Session
+	msgs    []string
 }
 type Session struct {
 	ctrie *util.Ctrie
