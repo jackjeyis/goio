@@ -161,6 +161,7 @@ func main() {
 				barrage.Channel().SetDeadline(240)
 				barrage.Channel().GetIOService().Serve(barrage)
 			case 4:
+				logger.Info("receive message")
 				network.BroadcastRoom(barrage.Channel().GetAttr("rid").(string), barrage.Channel().GetAttr("cid").(string), barrage.Body)
 			}
 		})
