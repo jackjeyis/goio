@@ -23,8 +23,8 @@ func init() {
 }
 
 type Bucket struct {
+	buckets []*Session
 }
-
 type Session struct {
 	ctrie *util.Ctrie
 	room  *util.Ctrie
