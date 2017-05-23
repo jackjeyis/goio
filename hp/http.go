@@ -29,6 +29,7 @@ var (
 )
 
 func Post(url, ctype string, body []byte) (Res, error) {
+	logger.Info("url %s Req body %s", url, string(body))
 	resp, err = http.Post(url, ctype, bytes.NewBuffer(body))
 	if err != nil {
 		logger.Error("hp.Post error %v", err)
@@ -36,6 +37,7 @@ func Post(url, ctype string, body []byte) (Res, error) {
 	}
 	defer resp.Body.Close()
 	body, err = ioutil.ReadAll(resp.Body)
+	logger.Info("url %s Resp  body %s", url, string(body))
 	if err != nil {
 		logger.Error("hp.Post ioutil.ReadAll error %v", err)
 		return res, err
@@ -78,7 +80,7 @@ func EncodeJson(notify interface{}) ([]byte, error) {
 }
 
 func StoreMessage(rid string, body []byte) error {
-	res, err := Post("http://172.16.6.135:8998/"+rid+"/chat", "application/json", body)
+	res, err := Post("http://10.12.197.12:8998/im/"+rid+"/chat", "application/json", body)
 	if err != nil || res.Code != 0 {
 		logger.Error("message store error %v", err)
 		return errors.New("Store Message failed!")
