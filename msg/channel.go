@@ -9,8 +9,8 @@ type Channel interface {
 	DecodeMessage() error
 	EncodeMessage(Message)
 	Serve(Message)
-	SetAttr(string, interface{})
-	GetAttr(string) interface{}
+	SetAttr(string, string)
+	GetAttr(string) string
 	GetIOService() Service
 	SetDeadline(int)
 }

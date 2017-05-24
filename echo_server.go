@@ -11,13 +11,12 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"strconv"
 	"time"
 	//"github.com/stackimpact/stackimpact-go"
 )
 
 type Auth struct {
-	Rid   int64
+	Rid   string
 	Token string
 	Cid   string
 }
@@ -30,15 +29,6 @@ type AuthReply struct {
 var (
 	app  *application.GenericApplication
 	auth Auth
-	uid  int64
-)
-
-type TermType byte
-
-const (
-	Android = TermType(iota)
-	IOS
-	PC
 )
 
 func main() {
@@ -103,19 +93,19 @@ func main() {
 					barrage.Channel().Close()
 					return
 				}
-				if auth.Rid == 0 || auth.Cid == "" || auth.Token == "" {
+				if auth.Rid == "" || auth.Cid == "" || auth.Token == "" {
 					logger.Error("param invalid")
 					barrage.Channel().Close()
 					return
 				}
 				barrage.Op = 8
-				rid := strconv.FormatInt(auth.Rid, 10)
-				res, err := util.Get("http://" + util.GetHttpConfig().Remoteaddr + "/im/" + rid + "/_check?token=" + auth.Token)
+				res, err := util.Get("http://" + util.GetHttpConfig().Remoteaddr + "/im/" + auth.Rid + "/_check?token=" + auth.Token)
 				if err != nil {
 					logger.Error("check token api error %v", err)
 					barrage.Channel().Close()
 					return
 				}
+				logger.Info("res %v", res)
 				var reply AuthReply
 
 				switch res.Code {
@@ -148,12 +138,12 @@ func main() {
 				}
 				barrage.Channel().SetAttr("status", "OK")
 				barrage.Channel().SetAttr("cid", auth.Cid)
-				barrage.Channel().SetAttr("uid", int64(res.Data.UserId))
-				barrage.Channel().SetAttr("rid", rid)
-				barrage.Channel().SetAttr("ct", IOS)
+				barrage.Channel().SetAttr("uid", res.Data.UserId)
+				barrage.Channel().SetAttr("rid", auth.Rid)
+				barrage.Channel().SetAttr("ct", util.GetClientType(auth.Cid))
 				network.Register(auth.Cid, barrage.Channel(), res.Data.Role)
 				barrage.Channel().GetIOService().Serve(barrage)
-				network.NotifyHost(rid, int64(res.Data.UserId), 1)
+				network.NotifyHost(auth.Rid, res.Data.UserId, 1)
 			}
 			switch barrage.Op {
 			case 2:
@@ -161,7 +151,7 @@ func main() {
 				barrage.Channel().SetDeadline(240)
 				barrage.Channel().GetIOService().Serve(barrage)
 			case 4:
-				network.BroadcastRoom(barrage.Channel().GetAttr("rid").(string), barrage.Channel().GetAttr("cid").(string), barrage.Body, true)
+				network.BroadcastRoom(barrage.Channel().GetAttr("rid"), barrage.Channel().GetAttr("cid"), barrage.Body, true)
 			}
 		})
 

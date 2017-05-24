@@ -26,7 +26,7 @@ type ServiceChannel struct {
 	proto      protocol.Protocol
 	io_service *service.IOService
 	service    msg.Service
-	attrs      map[string]interface{}
+	attrs      map[string]string
 	queue      *queue.Sequence
 }
 
@@ -38,7 +38,7 @@ func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol,
 		out:        queue.NewIOBuffer(false),
 		conn:       conn,
 		close:      make(chan struct{}),
-		attrs:      make(map[string]interface{}),
+		attrs:      make(map[string]string),
 		proto:      proto,
 		io_service: io_srv,
 		service:    srv,
@@ -47,15 +47,15 @@ func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol,
 	}
 }
 
-func (s *ServiceChannel) SetAttr(key string, value interface{}) {
+func (s *ServiceChannel) SetAttr(key, value string) {
 	s.attrs[key] = value
 }
 
-func (s *ServiceChannel) GetAttr(key string) interface{} {
+func (s *ServiceChannel) GetAttr(key string) string {
 	if attr, ok := s.attrs[key]; ok {
 		return attr
 	}
-	return nil
+	return ""
 }
 
 func (s *ServiceChannel) Start() {
@@ -71,10 +71,8 @@ func (s *ServiceChannel) OnRead() {
 	)
 	defer func() {
 		if s.GetAttr("status") == "OK" {
-			cid := s.GetAttr("cid").(string)
-			rid := s.GetAttr("rid").(string)
-			UnRegister(cid, rid)
-			NotifyHost(rid, s.GetAttr("uid").(int64), 0)
+			UnRegister(s.GetAttr("cid"), s.GetAttr("uid"), s.GetAttr("rid"))
+			NotifyHost(s.GetAttr("rid"), s.GetAttr("uid"), 0)
 		}
 		s.OnClose()
 		s.in.Reset()

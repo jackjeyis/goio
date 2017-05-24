@@ -30,40 +30,55 @@ type Session struct {
 }
 
 type Room struct {
-	cid_uid *util.Ctrie
-	rid     string
-	host    map[string]msg.Channel
+	chs  *util.Ctrie
+	rid  string
+	host map[string]msg.Channel
 }
 
 func NewRoom(id string) *Room {
 	return &Room{
-		cid_uid: util.New(nil),
-		rid:     id,
-		host:    make(map[string]msg.Channel),
+		chs:  util.New(nil),
+		rid:  id,
+		host: make(map[string]msg.Channel),
 	}
 }
 
-func (r *Room) addUid(cid string, uid int64) {
-	r.cid_uid.Insert([]byte(cid), uid)
+func (r *Room) addChan(cid, uid string, ch msg.Channel) {
+	c, _ := r.chs.Lookup([]byte(uid))
+	if c == nil {
+		c = make(map[string]msg.Channel)
+		r.chs.Insert([]byte(uid), c)
+	}
+	c.(map[string]msg.Channel)[cid] = ch
 }
 
-func (r *Room) getMember() (chans []msg.Channel, uids []int64, rcount int) {
-	for entry := range r.cid_uid.Iterator(nil) {
-		chans = append(chans, GetSession(string(entry.Key)))
-		uids = append(uids, entry.Value.(int64))
+func (r *Room) getMember() (chans []msg.Channel, uids []string, rcount int) {
+	for entry := range r.chs.Iterator(nil) {
+		for _, ch := range entry.Value.(map[string]msg.Channel) {
+			chans = append(chans, ch)
+		}
+		uids = append(uids, string(entry.Key))
 		rcount += 1
 	}
 	return
 }
 
-func (r *Room) deleteCid(cid string) {
-	r.cid_uid.Remove([]byte(cid))
+func (r *Room) deleteChan(cid, uid string) {
+	c, _ := r.chs.Lookup([]byte(uid))
+	if c != nil {
+		ch := c.(map[string]msg.Channel)
+		if len(ch) != 0 {
+			delete(ch, cid)
+		} else {
+			r.chs.Remove([]byte(uid))
+		}
+	}
 }
 
 func (s *Session) insert(cid string, ch msg.Channel, host int) {
 	var room *Room
 	s.ctrie.Insert([]byte(cid), ch)
-	rid := ch.GetAttr("rid").(string)
+	rid := ch.GetAttr("rid")
 	r, _ := s.room.Lookup([]byte(rid))
 	if r == nil {
 		room = NewRoom(rid)
@@ -74,20 +89,20 @@ func (s *Session) insert(cid string, ch msg.Channel, host int) {
 	if host != 2 {
 		room.host[cid] = ch
 	}
-	room.addUid(cid, ch.GetAttr("uid").(int64))
+	room.addChan(cid, ch.GetAttr("uid"), ch)
 }
 
-func (s *Session) delete(cid, rid string) {
+func (s *Session) delete(cid, uid, rid string) {
 	ch, _ := s.ctrie.Remove([]byte(cid))
 	if ch == nil {
 		return
 	}
 	r := s.roomer(rid)
 	if r != nil {
-		if r.cid_uid.Size() == 0 {
+		if r.chs.Size() == 0 {
 			s.room.Remove([]byte(rid))
 		} else {
-			r.deleteCid(cid)
+			r.deleteChan(cid, uid)
 			delete(r.host, cid)
 		}
 	}
@@ -113,8 +128,8 @@ func Register(cid string, ch msg.Channel, host int) {
 	s.insert(cid, ch, host)
 }
 
-func UnRegister(cid, rid string) {
-	s.delete(cid, rid)
+func UnRegister(cid, uid, rid string) {
+	s.delete(cid, uid, rid)
 }
 
 func IsRegister(cid string) bool {
@@ -134,7 +149,7 @@ func GetRoomSession(rid string) []msg.Channel {
 	return chans
 }
 
-func GetRoomStatus(rid string) (int, []int64) {
+func GetRoomStatus(rid string) (int, []string) {
 	r := s.roomer(rid)
 	if r == nil {
 		return 0, nil
@@ -143,7 +158,7 @@ func GetRoomStatus(rid string) (int, []int64) {
 	return count, uids
 }
 
-func NotifyHost(rid string, uid int64, code int8) {
+func NotifyHost(rid, uid string, code int8) {
 	r := s.roomer(rid)
 	if r == nil {
 		return
@@ -151,7 +166,8 @@ func NotifyHost(rid string, uid int64, code int8) {
 	notify := protocol.Notify{}
 	notify.Id = util.UUID()
 	notify.Ct = 90010
-	notify.Uid = uid
+	Uid, _ := strconv.ParseInt(uid, 10, 64)
+	notify.Uid = Uid
 	Rid, _ := strconv.ParseInt(rid, 10, 32)
 	notify.Rid = int32(Rid)
 	notify.Code = code
@@ -190,7 +206,7 @@ func BroadcastRoom(rid, cid string, body []byte, store bool) {
 		}
 	}
 	for _, c := range chans {
-		if c == nil || c.GetAttr("cid").(string) == cid {
+		if c == nil || c.GetAttr("cid") == cid {
 			continue
 		}
 		msg := &protocol.Barrage{}

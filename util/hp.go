@@ -7,12 +7,12 @@ import (
 	"goio/logger"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 type User struct {
-	UserId int  `json:"userId"`
-	Role   int  `json:"role"`
-	Rm     bool `json:"remove"`
+	UserId string `json:"userId"`
+	Role   int    `json:"role"`
 }
 
 type Res struct {
@@ -86,4 +86,14 @@ func StoreMessage(rid string, body []byte) error {
 		return errors.New("Store Message failed!")
 	}
 	return nil
+}
+
+func GetClientType(cid string) string {
+	if strings.HasPrefix(cid, "Android") {
+		return "Android"
+	} else if strings.HasPrefix(cid, "iOS") {
+		return "iOS"
+	} else {
+		return "Unknown"
+	}
 }
