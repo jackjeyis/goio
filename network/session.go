@@ -173,7 +173,7 @@ func NotifyHost(rid, uid string, code int8) {
 	notify.Code = code
 	notify.Time = util.GetMillis()
 	body, err := util.EncodeJson(notify)
-	err = util.StoreMessage(rid, body)
+	err = util.StoreMessage("http://"+GetHttpConfig().Remoteaddr+"/im/"+rid+"/view_record", body)
 
 	if err != nil {
 		logger.Error("util.StoreMessage error %v", err)
@@ -199,7 +199,7 @@ func BroadcastRoom(rid, cid string, body []byte, store bool) {
 		return
 	}
 	if store {
-		err := util.StoreMessage(rid, body)
+		err := util.StoreMessage("http://"+GetHttpConfig().Remoteaddr+"/im/"+rid+"/chat", body)
 
 		if err != nil {
 			logger.Error("util.StoreMessage error %v", err)

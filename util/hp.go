@@ -79,8 +79,8 @@ func EncodeJson(notify interface{}) ([]byte, error) {
 	return json.Marshal(notify)
 }
 
-func StoreMessage(rid string, body []byte) error {
-	res, err := Post("http://"+GetHttpConfig().Remoteaddr+"/im/"+rid+"/chat", "application/json", body)
+func StoreMessage(url string, body []byte) error {
+	res, err := Post(url, "application/json", body)
 	if err != nil || res.Code != 0 {
 		logger.Error("message store error %v", err)
 		return errors.New("Store Message failed!")
