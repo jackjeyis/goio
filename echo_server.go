@@ -153,7 +153,7 @@ func main() {
 				barrage.Channel().SetAttr("ct", IOS)
 				network.Register(auth.Cid, barrage.Channel(), res.Data.Role)
 				barrage.Channel().GetIOService().Serve(barrage)
-				network.NotifyHost(rid, 1)
+				network.NotifyHost(rid, int64(res.Data.UserId), 1)
 			}
 			switch barrage.Op {
 			case 2:
@@ -161,7 +161,7 @@ func main() {
 				barrage.Channel().SetDeadline(240)
 				barrage.Channel().GetIOService().Serve(barrage)
 			case 4:
-				network.BroadcastRoom(barrage.Channel().GetAttr("rid").(string), barrage.Channel().GetAttr("cid").(string), barrage.Body)
+				network.BroadcastRoom(barrage.Channel().GetAttr("rid").(string), barrage.Channel().GetAttr("cid").(string), barrage.Body, true)
 			}
 		})
 
@@ -223,7 +223,7 @@ func PushRoom(w http.ResponseWriter, r *http.Request) {
 		res["ret"] = 65535
 		return
 	}
-	network.BroadcastRoom(param.Get("rid"), "", bodyBytes)
+	network.BroadcastRoom(param.Get("rid"), "", bodyBytes, false)
 	return
 }
 

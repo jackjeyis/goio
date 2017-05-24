@@ -32,14 +32,14 @@ type Session struct {
 type Room struct {
 	cid_uid *util.Ctrie
 	rid     string
-	host    msg.Channel
-	admin   msg.Channel
+	host    map[string]msg.Channel
 }
 
 func NewRoom(id string) *Room {
 	return &Room{
 		cid_uid: util.New(nil),
 		rid:     id,
+		host:    make(map[string]msg.Channel),
 	}
 }
 
@@ -71,10 +71,8 @@ func (s *Session) insert(cid string, ch msg.Channel, host int) {
 	} else {
 		room = r.(*Room)
 	}
-	if host == 0 {
-		room.admin = ch
-	} else if host == 1 {
-		room.host = ch
+	if host != 2 {
+		room.host[cid] = ch
 	}
 	room.addUid(cid, ch.GetAttr("uid").(int64))
 }
@@ -89,7 +87,8 @@ func (s *Session) delete(cid, rid string) {
 		if r.cid_uid.Size() == 0 {
 			s.room.Remove([]byte(rid))
 		} else {
-			r.deleteCid(ch.(msg.Channel).GetAttr("cid").(string))
+			r.deleteCid(cid)
+			delete(r.host, cid)
 		}
 	}
 }
@@ -144,26 +143,15 @@ func GetRoomStatus(rid string) (int, []int64) {
 	return count, uids
 }
 
-func NotifyHost(rid string, code int8) {
+func NotifyHost(rid string, uid int64, code int8) {
 	r := s.roomer(rid)
 	if r == nil {
 		return
 	}
-
-	if r.host != nil {
-		Push(rid, r.host, code)
-	}
-
-	if r.admin != nil {
-		Push(rid, r.admin, code)
-	}
-}
-
-func Push(rid string, ch msg.Channel, code int8) {
 	notify := protocol.Notify{}
 	notify.Id = util.UUID()
 	notify.Ct = 90010
-	notify.Uid = ch.GetAttr("uid").(int64)
+	notify.Uid = uid
 	Rid, _ := strconv.ParseInt(rid, 10, 32)
 	notify.Rid = int32(Rid)
 	notify.Code = code
@@ -175,6 +163,12 @@ func Push(rid string, ch msg.Channel, code int8) {
 		logger.Error("util.StoreMessage error %v", err)
 	}
 
+	for _, ch := range r.host {
+		Push(ch, body)
+	}
+}
+
+func Push(ch msg.Channel, body []byte) {
 	msg := &protocol.Barrage{}
 	msg.Op = 5
 	msg.Ver = 1
@@ -183,15 +177,17 @@ func Push(rid string, ch msg.Channel, code int8) {
 	ch.GetIOService().Serve(msg)
 }
 
-func BroadcastRoom(rid, cid string, body []byte) {
+func BroadcastRoom(rid, cid string, body []byte, store bool) {
 	chans := GetRoomSession(rid)
 	if chans == nil {
 		return
 	}
-	err := util.StoreMessage(rid, body)
+	if store {
+		err := util.StoreMessage(rid, body)
 
-	if err != nil {
-		logger.Error("util.StoreMessage error %v", err)
+		if err != nil {
+			logger.Error("util.StoreMessage error %v", err)
+		}
 	}
 	for _, c := range chans {
 		if c == nil || c.GetAttr("cid").(string) == cid {

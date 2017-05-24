@@ -74,7 +74,7 @@ func (s *ServiceChannel) OnRead() {
 			cid := s.GetAttr("cid").(string)
 			rid := s.GetAttr("rid").(string)
 			UnRegister(cid, rid)
-			NotifyHost(rid, 0)
+			NotifyHost(rid, s.GetAttr("uid").(int64), 0)
 		}
 		s.OnClose()
 		s.in.Reset()
