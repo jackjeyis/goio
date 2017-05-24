@@ -12,6 +12,7 @@ import (
 	"goio/msg"
 	"goio/network"
 	"goio/service"
+	"goio/util"
 )
 
 var (
@@ -29,14 +30,13 @@ type Application interface {
 	OnFinish() error
 }
 type GenericApplication struct {
-	io_service     *service.IOService
-	config_manager *ConfigManager
-	logger_config  string
-	acceptors      []*network.Acceptor
-	on_start       DelegateFunc
-	on_stop        DelegateFunc
-	on_finish      DelegateFunc
-	app_config     string
+	io_service    *service.IOService
+	logger_config string
+	acceptors     []*network.Acceptor
+	on_start      DelegateFunc
+	on_stop       DelegateFunc
+	on_finish     DelegateFunc
+	app_config    string
 }
 
 func (app *GenericApplication) SetOnStart(fn DelegateFunc) *GenericApplication {
@@ -77,10 +77,6 @@ func (app *GenericApplication) OnFinish() error {
 
 func (app *GenericApplication) RegisterService(name string, fn func(msg.Message)) {
 	service.Instance().RegisterService(name, fn)
-}
-
-func (app *GenericApplication) GetConfigManager() *ConfigManager {
-	return app.config_manager
 }
 
 func (app *GenericApplication) Monitor() {
@@ -231,8 +227,8 @@ func (app *GenericApplication) StartLogger() (err error) {
 
 func (app *GenericApplication) LoadConfig() (err error) {
 	if app.app_config != "" {
-		app.config_manager = NewConfigManager(app.app_config)
-		logger.Info("app conf path %s", app.config_manager.conf)
+		util.NewConfigManager(app.app_config)
+		logger.Info("app conf path %s", util.GetConf())
 	} else {
 
 	}
@@ -240,8 +236,25 @@ func (app *GenericApplication) LoadConfig() (err error) {
 }
 
 func (app *GenericApplication) StartIOService() (err error) {
+	var io_service_config service.IOServiceConfig
 	app.io_service = app.GetIOService()
-	if err = app.io_service.Init(app.config_manager.GetIOServiceConfig()); err != nil {
+	cf := util.GetIOServiceConf()
+	if cf.Srvworker != 0 {
+		io_service_config.Srvworker = cf.Srvworker
+		io_service_config.Srvqueue = cf.Srvqueue
+		io_service_config.Ioworker = cf.Ioworker
+		io_service_config.Ioqueue = cf.Ioqueue
+		io_service_config.Matrixbucket = cf.Matrixbucket
+		io_service_config.Matrixsize = cf.Matrixsize
+	} else {
+		io_service_config.Srvworker = 1000
+		io_service_config.Srvqueue = 10000
+		io_service_config.Ioworker = 1000
+		io_service_config.Ioqueue = 10000
+		io_service_config.Matrixbucket = 16
+		io_service_config.Matrixsize = 1024
+	}
+	if err = app.io_service.Init(io_service_config); err != nil {
 		return err
 	}
 
@@ -263,13 +276,13 @@ func (app *GenericApplication) GetIOService() *service.IOService {
 }
 
 func (app *GenericApplication) StartServiceManager() (err error) {
-	if app.config_manager == nil {
+	if util.GetManager() == nil {
 		return errors.New("Application.StartServiceManager no config set,ignore")
 	}
 
 	var acceptor *network.Acceptor
-	logger.Info("service config %v", app.config_manager.GetServicesConfig())
-	for _, service_config := range app.config_manager.GetServicesConfig() {
+	logger.Info("service config %v", util.GetServicesConfig())
+	for _, service_config := range util.GetServicesConfig() {
 		acceptor, err = network.Instance().CreateAcceptor(app.GetIOService(),
 			service_config.Addr, service_config.Name)
 

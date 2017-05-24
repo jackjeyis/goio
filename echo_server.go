@@ -3,11 +3,11 @@ package main
 import (
 	"encoding/json"
 	"goio/application"
-	"goio/hp"
 	"goio/logger"
 	"goio/msg"
 	"goio/network"
 	"goio/protocol"
+	"goio/util"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -110,7 +110,7 @@ func main() {
 				}
 				barrage.Op = 8
 				rid := strconv.FormatInt(auth.Rid, 10)
-				res, err := hp.Get("http://172.16.6.135:8998/im/" + rid + "/_check?token=" + auth.Token)
+				res, err := util.Get("http://" + util.GetHttpConfig().Remoteaddr + "/im/" + rid + "/_check?token=" + auth.Token)
 				if err != nil {
 					logger.Error("check token api error %v", err)
 					barrage.Channel().Close()
@@ -138,7 +138,7 @@ func main() {
 					reply.Msg = "该用户已连接!"
 				}
 
-				body, _ := hp.EncodeJson(reply)
+				body, _ := util.EncodeJson(reply)
 				barrage.Body = body
 				if reply.Code != 0 {
 					barrage.Channel().GetIOService().Serve(barrage)
@@ -175,7 +175,7 @@ func main() {
 				WriteTimeout: time.Duration(5) * time.Second,
 			}
 			httpServer.SetKeepAlivesEnabled(true)
-			addr := app.GetConfigManager().GetHttpConfig().Addr
+			addr := util.GetHttpConfig().Localaddr
 			ln, err := net.Listen("tcp", "0.0.0.0:7172")
 			if err != nil {
 				logger.Error("net.Listen %s error %v", addr)

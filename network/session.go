@@ -1,7 +1,6 @@
 package network
 
 import (
-	"goio/hp"
 	"goio/logger"
 	"goio/msg"
 	"goio/protocol"
@@ -168,11 +167,12 @@ func Push(rid string, ch msg.Channel, code int8) {
 	Rid, _ := strconv.ParseInt(rid, 10, 32)
 	notify.Rid = int32(Rid)
 	notify.Code = code
-	body, err := hp.EncodeJson(notify)
-	err = hp.StoreMessage(rid, body)
+	notify.Time = util.GetMillis()
+	body, err := util.EncodeJson(notify)
+	err = util.StoreMessage(rid, body)
 
 	if err != nil {
-		logger.Error("hp.StoreMessage error %v", err)
+		logger.Error("util.StoreMessage error %v", err)
 	}
 
 	msg := &protocol.Barrage{}
@@ -188,10 +188,10 @@ func BroadcastRoom(rid, cid string, body []byte) {
 	if chans == nil {
 		return
 	}
-	err := hp.StoreMessage(rid, body)
+	err := util.StoreMessage(rid, body)
 
 	if err != nil {
-		logger.Error("hp.StoreMessage error %v", err)
+		logger.Error("util.StoreMessage error %v", err)
 	}
 	for _, c := range chans {
 		if c == nil || c.GetAttr("cid").(string) == cid {

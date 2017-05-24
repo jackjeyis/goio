@@ -43,6 +43,7 @@ type Notify struct {
 	Rid  int32  `json:"roomId"`
 	Uid  int64  `json:"fromId"`
 	Code int8   `json:"code"`
+	Time int64  `json:"time"`
 }
 
 type BarrageHeader struct {

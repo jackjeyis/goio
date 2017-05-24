@@ -16,4 +16,5 @@ matrixsize=1024
 #524288
 
 [http]
-addr="0.0.0.0:7172"
+localaddr="0.0.0.0:7172"
+remoteaddr="172.16.6.135:8998"
