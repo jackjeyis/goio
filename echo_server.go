@@ -143,7 +143,7 @@ func main() {
 				barrage.Channel().SetAttr("ct", util.GetClientType(auth.Cid))
 				network.Register(auth.Cid, barrage.Channel(), res.Data.Role)
 				barrage.Channel().GetIOService().Serve(barrage)
-				network.NotifyHost(auth.Rid, res.Data.UserId, 1)
+				network.NotifyHost(auth.Rid, auth.Cid, res.Data.UserId, 1)
 			}
 			switch barrage.Op {
 			case 2:

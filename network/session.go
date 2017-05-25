@@ -158,7 +158,7 @@ func GetRoomStatus(rid string) (int, []string) {
 	return count, uids
 }
 
-func NotifyHost(rid, uid string, code int8) {
+func NotifyHost(rid, cid, uid string, code int8) {
 	r := s.roomer(rid)
 	if r == nil {
 		return
@@ -183,11 +183,11 @@ func NotifyHost(rid, uid string, code int8) {
 			Push(ch, body)
 		}
 	} else {
-		PushRoom(rid, body)
+		PushRoom(rid, cid, body)
 	}
 }
 
-func PushRoom(rid string, body []byte) {
+func PushRoom(rid, cid string, body []byte) {
 	chans := GetRoomSession(rid)
 	if chans == nil {
 		return
@@ -217,5 +217,5 @@ func BroadcastRoom(rid, cid string, body []byte, store bool) {
 			logger.Error("util.StoreMessage error %v", err)
 		}
 	}
-	PushRoom(rid, body)
+	PushRoom(rid, cid, body)
 }

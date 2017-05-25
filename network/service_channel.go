@@ -72,7 +72,7 @@ func (s *ServiceChannel) OnRead() {
 	defer func() {
 		if s.GetAttr("status") == "OK" {
 			UnRegister(s.GetAttr("cid"), s.GetAttr("uid"), s.GetAttr("rid"))
-			NotifyHost(s.GetAttr("rid"), s.GetAttr("uid"), 0)
+			NotifyHost(s.GetAttr("rid"), s.GetAttr("cid"), s.GetAttr("uid"), 0)
 		}
 		s.OnClose()
 		s.in.Reset()
