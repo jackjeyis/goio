@@ -178,9 +178,25 @@ func NotifyHost(rid, uid string, code int8) {
 	if err != nil {
 		logger.Error("util.StoreMessage error %v", err)
 	}
+	if code == 0 {
+		for _, ch := range r.host {
+			Push(ch, body)
+		}
+	} else {
+		PushRoom(rid, body)
+	}
+}
 
-	for _, ch := range r.host {
-		Push(ch, body)
+func PushRoom(rid string, body []byte) {
+	chans := GetRoomSession(rid)
+	if chans == nil {
+		return
+	}
+	for _, c := range chans {
+		if c == nil || c.GetAttr("cid") == cid {
+			continue
+		}
+		Push(c, body)
 	}
 }
 
@@ -194,10 +210,6 @@ func Push(ch msg.Channel, body []byte) {
 }
 
 func BroadcastRoom(rid, cid string, body []byte, store bool) {
-	chans := GetRoomSession(rid)
-	if chans == nil {
-		return
-	}
 	if store {
 		err := util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+rid+"/chat", body)
 
@@ -205,15 +217,5 @@ func BroadcastRoom(rid, cid string, body []byte, store bool) {
 			logger.Error("util.StoreMessage error %v", err)
 		}
 	}
-	for _, c := range chans {
-		if c == nil || c.GetAttr("cid") == cid {
-			continue
-		}
-		msg := &protocol.Barrage{}
-		msg.Op = 5
-		msg.Ver = 1
-		msg.Body = body
-		msg.SetChannel(c)
-		c.GetIOService().Serve(msg)
-	}
+	PushRoom(rid, body)
 }
