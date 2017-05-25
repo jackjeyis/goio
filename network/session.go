@@ -67,9 +67,8 @@ func (r *Room) deleteChan(cid, uid string) {
 	c, _ := r.chs.Lookup([]byte(uid))
 	if c != nil {
 		ch := c.(map[string]msg.Channel)
-		if len(ch) != 0 {
-			delete(ch, cid)
-		} else {
+		delete(ch, cid)
+		if len(ch) == 0 {
 			r.chs.Remove([]byte(uid))
 		}
 	}
@@ -102,6 +101,7 @@ func (s *Session) delete(cid, uid, rid string) {
 		if r.chs.Size() == 0 {
 			s.room.Remove([]byte(rid))
 		} else {
+			logger.Info("r.deleteChan")
 			r.deleteChan(cid, uid)
 			delete(r.host, cid)
 		}
@@ -173,7 +173,7 @@ func NotifyHost(rid, uid string, code int8) {
 	notify.Code = code
 	notify.Time = util.GetMillis()
 	body, err := util.EncodeJson(notify)
-	err = util.StoreMessage("http://"+GetHttpConfig().Remoteaddr+"/im/"+rid+"/view_record", body)
+	err = util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+rid+"/view_record", body)
 
 	if err != nil {
 		logger.Error("util.StoreMessage error %v", err)
@@ -199,7 +199,7 @@ func BroadcastRoom(rid, cid string, body []byte, store bool) {
 		return
 	}
 	if store {
-		err := util.StoreMessage("http://"+GetHttpConfig().Remoteaddr+"/im/"+rid+"/chat", body)
+		err := util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+rid+"/chat", body)
 
 		if err != nil {
 			logger.Error("util.StoreMessage error %v", err)
