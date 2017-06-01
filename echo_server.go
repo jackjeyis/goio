@@ -189,13 +189,27 @@ func main() {
 			var path string
 			path = "/barrage"
 			path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
-			path = "/barrage/server"
-			path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
-			path, err = c.CreateProtectedEphemeralSequential("/barrage/server/1", []byte(util.InternalIp()), zk.WorldACL(zk.PermAll))
+			//		path = "/barrage/server"
+			//		path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
+			path, err = c.CreateProtectedEphemeralSequential("/barrage/master", []byte(util.InternalIp()), zk.WorldACL(zk.PermAll))
 			if err != nil {
 				logger.Error("zk.Create (\"%s\") error (%v)", path, err)
-				panic(err)
+				//panic(err)
 			}
+			go func() {
+				for {
+					_, _, ev, err := c.ChildrenW("/barrage")
+					e := <-ev
+					if e.Type == zk.EventNodeChildrenChanged {
+
+						logger.Info("event %s type %v", e.State.String(), e.Type)
+						path, err = c.CreateProtectedEphemeralSequential("/barrage/master", []byte(util.InternalIp()), zk.WorldACL(zk.PermAll))
+						if err != nil {
+							logger.Error("zk.Create Watch (\"%s\"), error (%v)", path, err)
+						}
+					}
+				}
+			}()
 		}()
 		return nil
 	}).Run()
