@@ -4,6 +4,7 @@ import (
 	"goio/logger"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -52,10 +53,27 @@ type HttpConfig struct {
 	Remoteaddr string
 }
 
+type ZkConfig struct {
+	Addrs   []string
+	Timeout Duration
+	SrvId   string
+}
+
+type Duration struct {
+	time.Duration
+}
+
+func (d *Duration) UnmarshalText(text []byte) error {
+	var err error
+	d.Duration, err = time.ParseDuration(string(text))
+	return err
+}
+
 type ServicesConfig struct {
 	Services SrvInfo
 	Engine   IOServiceConf
 	Http     HttpConfig
+	Zk       ZkConfig
 }
 
 type serviceInfo struct {
@@ -73,6 +91,10 @@ func GetIOServiceConf() IOServiceConf {
 
 func GetHttpConfig() HttpConfig {
 	return cm.srvConf.Http
+}
+
+func GetZkConfig() ZkConfig {
+	return cm.srvConf.Zk
 }
 
 func GetConf() string {

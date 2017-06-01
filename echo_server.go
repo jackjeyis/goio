@@ -12,6 +12,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/samuel/go-zookeeper/zk"
 	//"github.com/stackimpact/stackimpact-go"
 )
 
@@ -174,6 +176,24 @@ func main() {
 			logger.Info("start http listen %s", addr)
 			if err = httpServer.Serve(ln); err != nil {
 				logger.Error("httpServer.Serve() error %v", err)
+				panic(err)
+			}
+		}()
+
+		go func() {
+			c, _, err := zk.Connect(util.GetZkConfig().Addrs, util.GetZkConfig().Timeout.Duration)
+			if err != nil {
+				logger.Error("zk.Connect (\"%v\") error (%v)", util.GetZkConfig().Addrs, err)
+				panic(err)
+			}
+			var path string
+			path = "/barrage"
+			path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
+			path = "/barrage/server"
+			path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
+			path, err = c.CreateProtectedEphemeralSequential("/barrage/server/1", []byte(util.InternalIp()), zk.WorldACL(zk.PermAll))
+			if err != nil {
+				logger.Error("zk.Create (\"%s\") error (%v)", path, err)
 				panic(err)
 			}
 		}()

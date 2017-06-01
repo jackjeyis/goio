@@ -18,3 +18,8 @@ matrixsize=1024
 [http]
 localaddr="0.0.0.0:7172"
 remoteaddr="172.16.6.135:8998"
+
+[zk]
+addrs = ["172.16.6.77"]
+timeout = "500ms"
+srvid = "1"

@@ -101,7 +101,6 @@ func (s *Session) delete(cid, uid, rid string) {
 		if r.chs.Size() == 0 {
 			s.room.Remove([]byte(rid))
 		} else {
-			logger.Info("r.deleteChan")
 			r.deleteChan(cid, uid)
 			delete(r.host, cid)
 		}
