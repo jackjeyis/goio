@@ -26,6 +26,7 @@ type Auth struct {
 type AuthReply struct {
 	Code int
 	Msg  string
+	Gag  bool
 }
 
 var (
@@ -114,6 +115,7 @@ func main() {
 				case 0:
 					reply.Code = 0
 					reply.Msg = "鉴权成功!"
+					reply.Gag = res.Data.Gag
 				case 403:
 					reply.Code = 1
 					reply.Msg = "token 校验失败!"
@@ -205,12 +207,10 @@ func main() {
 					e := <-ev
 					if e.Type == zk.EventNodeChildrenChanged {
 
-						logger.Info("event %s type %v", e.State.String(), e.Type)
-						if len(paths) == 0 {
-							path, err = c.Create("/barrage/master", []byte(util.InternalIp()), zk.FlagEphemeral|zk.FlagSequence, zk.WorldACL(zk.PermAll))
-							if err != nil {
-								logger.Error("zk.Create Watch (\"%s\"), error (%v)", path, err)
-							}
+						logger.Info("event %s type %v paths %v", e.State.String(), e.Type, paths)
+						path, err = c.Create("/barrage/master", []byte(util.InternalIp()), zk.FlagEphemeral|zk.FlagSequence, zk.WorldACL(zk.PermAll))
+						if err != nil {
+							logger.Error("zk.Create Watch (\"%s\"), error (%v)", path, err)
 						}
 					}
 				}

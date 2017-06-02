@@ -13,6 +13,7 @@ import (
 type User struct {
 	UserId string `json:"userId"`
 	Role   int    `json:"role"`
+	Gag    bool   `json:allowChat`
 }
 
 type Res struct {
