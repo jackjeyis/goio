@@ -24,9 +24,9 @@ type Auth struct {
 }
 
 type AuthReply struct {
-	Code int
-	Msg  string
-	Gag  bool
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Gag  bool   `json:"gag"`
 }
 
 var (
