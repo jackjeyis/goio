@@ -197,7 +197,7 @@ func (app *GenericApplication) InitApp() (err error) {
 		}
 	}
 	*/
-	//util.Daemon()
+	util.Daemon()
 	return nil
 }
 
@@ -218,7 +218,7 @@ func (app *GenericApplication) WritePidFile() (err error) {
 
 func (app *GenericApplication) StartLogger() (err error) {
 	if app.logger_config == "" {
-		logger.Start( /*logger.LogFilePath("./log"),*/ logger.EveryHour, logger.PrintStack)
+		logger.Start(logger.LogFilePath("./log"), logger.EveryHour, logger.PrintStack)
 	} else {
 
 	}

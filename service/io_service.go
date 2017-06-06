@@ -39,6 +39,7 @@ func (ss *ServiceStage) Stop() {
 func (ss *ServiceStage) Send(msg msg.Message) {
 	select {
 	case <-ss.stage.stop:
+		close(ss.stage.queue)
 		return
 	case ss.stage.queue <- msg:
 	}
@@ -68,6 +69,7 @@ func (io *IOStage) Stop() {
 func (io *IOStage) Send(msg msg.Message) {
 	select {
 	case <-io.stage.stop:
+		close(io.stage.queue)
 		return
 	case io.stage.queue <- msg:
 	}
