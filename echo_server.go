@@ -127,9 +127,11 @@ func main() {
 					reply.Msg = "您已被管理员移出，无权限观看!"
 				}
 
-				if network.IsRegister(auth.Cid) {
+				ch := network.GetSession(auth.Cid)
+				if ch != nil {
 					reply.Code = 0
 					reply.Msg = "该用户重新连接,踢出老的登录设备!"
+					ch.Close()
 					network.UnRegister(auth.Cid)
 				}
 

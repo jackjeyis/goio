@@ -131,10 +131,6 @@ func UnRegister(cid, uid, rid string) {
 	s.delete(cid, uid, rid)
 }
 
-func IsRegister(cid string) bool {
-	return GetSession(cid) != nil
-}
-
 func GetSession(cid string) msg.Channel {
 	return s.find(cid)
 }
