@@ -128,8 +128,9 @@ func main() {
 				}
 
 				if network.IsRegister(auth.Cid) {
-					reply.Code = 4
-					reply.Msg = "该用户已连接!"
+					reply.Code = 0
+					reply.Msg = "该用户重新连接,踢出老的登录设备!"
+					network.UnRegister(auth.Cid)
 				}
 
 				body, _ := util.EncodeJson(reply)
