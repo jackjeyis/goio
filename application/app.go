@@ -187,6 +187,7 @@ func (app *GenericApplication) Stop() (err error) {
 
 func (app *GenericApplication) ParseCmd() error {
 	app.app_config = *app_config
+	app.logger_config = *log_config
 	return nil
 }
 
@@ -217,11 +218,13 @@ func (app *GenericApplication) WritePidFile() (err error) {
 }
 
 func (app *GenericApplication) StartLogger() (err error) {
+	var path string
 	if app.logger_config == "" {
-		logger.Start(logger.LogFilePath("./log"), logger.EveryHour, logger.PrintStack)
+		path = "./log"
 	} else {
-
+		path = app.logger_config
 	}
+	logger.Start(logger.LogFilePath(path), logger.EveryHour, logger.PrintStack)
 	return nil
 }
 
