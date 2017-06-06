@@ -2,7 +2,10 @@ package util
 
 import (
 	"goio/logger"
+	"io/ioutil"
 	"net"
+	"net/http"
+	"strings"
 )
 
 func InternalIp() string {
@@ -24,4 +27,19 @@ func InternalIp() string {
 		}
 	}
 	return ""
+}
+
+func ExternalIp() string {
+	resp, err := http.Get("http://myexternalip.com/raw")
+	if err != nil {
+		logger.Error("http.Get external ip error %v", err)
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("ioutil.ReadAll error %v", err)
+		panic(err)
+	}
+	return strings.TrimRight(string(body), "\n")
 }
