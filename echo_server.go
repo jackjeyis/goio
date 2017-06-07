@@ -186,38 +186,43 @@ func main() {
 		}()
 
 		go func() {
-			c, _, err := zk.Connect(util.GetZkConfig().Addrs, util.GetZkConfig().Timeout.Duration)
+			c, ev, err := zk.Connect(util.GetZkConfig().Addrs, util.GetZkConfig().Timeout.Duration)
 			if err != nil {
 				logger.Error("zk.Connect (\"%v\") error (%v)", util.GetZkConfig().Addrs, err)
 				panic(err)
 			}
-			var path string
-			path = "/barrage"
-			path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
-			//		path = "/barrage/server"
-			//		path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
-			paths, _, err := c.Children("/barrage")
-			if len(paths) == 0 {
-				path, err = c.Create("/barrage/master", []byte(util.InternalIp()), zk.FlagEphemeral|zk.FlagSequence, zk.WorldACL(zk.PermAll))
-				if err != nil {
-					logger.Error("zk.Create (\"%s\") error (%v)", path, err)
-					//panic(err)
-				}
-			}
-			go func() {
-				for {
-					paths, _, ev, err := c.ChildrenW("/barrage")
-					e := <-ev
-					if e.Type == zk.EventNodeChildrenChanged {
-
-						logger.Info("event %s type %v paths %v", e.State.String(), e.Type, paths)
+			for e := range ev {
+				if e.State == zk.StateConnected {
+					var path string
+					path = "/barrage"
+					path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
+					//		path = "/barrage/server"
+					//		path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
+					paths, _, err := c.Children("/barrage")
+					if len(paths) == 0 {
 						path, err = c.Create("/barrage/master", []byte(util.InternalIp()), zk.FlagEphemeral|zk.FlagSequence, zk.WorldACL(zk.PermAll))
 						if err != nil {
-							logger.Error("zk.Create Watch (\"%s\"), error (%v)", path, err)
+							logger.Error("zk.Create (\"%s\") error (%v)", path, err)
+							//panic(err)
 						}
 					}
+					go func() {
+						for {
+							paths, _, ev, err := c.ChildrenW("/barrage")
+							e := <-ev
+							if e.Type == zk.EventNodeChildrenChanged {
+
+								logger.Info("event %s type %v paths %v", e.State.String(), e.Type, paths)
+								path, err = c.Create("/barrage/master", []byte(util.InternalIp()), zk.FlagEphemeral|zk.FlagSequence, zk.WorldACL(zk.PermAll))
+								if err != nil {
+									logger.Error("zk.Create Watch (\"%s\"), error (%v)", path, err)
+								}
+							}
+						}
+					}()
+
 				}
-			}()
+			}
 		}()
 		return nil
 	}).Run()
