@@ -213,7 +213,7 @@ func main() {
 								e := <-ev
 								if e.Type == zk.EventNodeChildrenChanged {
 
-									if len(paths) == 0 {
+									if len(paths) == 1 {
 										logger.Info("event %s type %v paths %v", e.State.String(), e.Type, paths)
 										path, err = c.Create("/barrage/master", []byte(util.InternalIp()), zk.FlagEphemeral|zk.FlagSequence, zk.WorldACL(zk.PermAll))
 										if err != nil {
