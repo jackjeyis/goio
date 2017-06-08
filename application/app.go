@@ -209,7 +209,7 @@ func (app *GenericApplication) Daemon() error {
 func (app *GenericApplication) WritePidFile() (err error) {
 	var f *os.File
 	defer f.Close()
-	f, err = os.OpenFile("pid", os.O_CREATE|os.O_WRONLY, 0644)
+	f, err = os.OpenFile("pid", os.O_CREATE || os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		return
 	}
