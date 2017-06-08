@@ -201,7 +201,7 @@ func main() {
 						//		path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
 						paths, _, err := c.Children("/barrage")
 						if len(paths) == 0 {
-							path, err = c.Create("/barrage/master", []byte(util.InternalIp()), zk.FlagEphemeral|zk.FlagSequence, zk.WorldACL(zk.PermAll))
+							path, err = c.Create("/barrage/master", []byte(app.GetIp()), zk.FlagEphemeral|zk.FlagSequence, zk.WorldACL(zk.PermAll))
 							if err != nil {
 								logger.Error("zk.Create (\"%s\") error (%v)", path, err)
 								//panic(err)
@@ -215,7 +215,7 @@ func main() {
 
 									if len(paths) == 1 {
 										logger.Info("event %s type %v paths %v", e.State.String(), e.Type, paths)
-										path, err = c.Create("/barrage/master", []byte(util.InternalIp()), zk.FlagEphemeral|zk.FlagSequence, zk.WorldACL(zk.PermAll))
+										path, err = c.Create("/barrage/master", []byte(app.GetIp()), zk.FlagEphemeral|zk.FlagSequence, zk.WorldACL(zk.PermAll))
 										if err != nil {
 											logger.Error("zk.Create Watch (\"%s\"), error (%v)", path, err)
 										}

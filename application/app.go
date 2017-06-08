@@ -21,6 +21,7 @@ var (
 	daemon_mode  = flag.Bool("d", false, "daemon mode")
 	app_config   = flag.String("c", ".", "app config")
 	log_config   = flag.String("l", ".", "log config")
+	ip_mode      = flag.Bool("i", false, "ip address")
 )
 
 type DelegateFunc func() error
@@ -37,6 +38,7 @@ type GenericApplication struct {
 	on_stop       DelegateFunc
 	on_finish     DelegateFunc
 	app_config    string
+	ip            string
 }
 
 func (app *GenericApplication) SetOnStart(fn DelegateFunc) *GenericApplication {
@@ -188,6 +190,11 @@ func (app *GenericApplication) Stop() (err error) {
 func (app *GenericApplication) ParseCmd() error {
 	app.app_config = *app_config
 	app.logger_config = *log_config
+	if *ip_mode {
+		app.ip = util.ExternalIp()
+	} else {
+		app.ip = util.InternalIp()
+	}
 	return nil
 }
 
@@ -323,4 +330,8 @@ func (app *GenericApplication) StopServiceManager() error {
 func (app *GenericApplication) StopIOService() error {
 	app.io_service.CleanUp()
 	return nil
+}
+
+func (app *GenericApplication) GetIp() string {
+	return app.ip
 }
