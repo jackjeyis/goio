@@ -193,7 +193,7 @@ func main() {
 			}
 			go func(ev <-chan zk.Event) {
 				for e := range ev {
-					if e.State == zk.StateConnected {
+					if e.State == zk.StateHasSession {
 						var path string
 						path = "/barrage"
 						path, err = c.Create(path, []byte(""), 0, zk.WorldACL(zk.PermAll))
