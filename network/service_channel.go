@@ -74,9 +74,9 @@ func (s *ServiceChannel) OnRead() {
 			UnRegister(s.GetAttr("cid"), s.GetAttr("uid"), s.GetAttr("rid"))
 			NotifyHost(s.GetAttr("rid"), s.GetAttr("cid"), s.GetAttr("uid"), 0)
 		}
-		s.OnClose()
 		s.in.Reset()
-		s.conn.CloseRead()
+		s.out.Reset()
+		s.conn.Close()
 	}()
 L:
 	for {
@@ -111,10 +111,10 @@ L:
 }
 
 func (s *ServiceChannel) OnWrite() {
-	var (
+	/*var (
 		n int
-	)
-	defer func() {
+	)*/
+	/*defer func() {
 		s.out.Reset()
 	}()
 
@@ -132,7 +132,7 @@ func (s *ServiceChannel) OnWrite() {
 			}
 
 		default:
-			/*if s.out.GetReadSize() > 0 {
+			if s.out.GetReadSize() > 0 {
 				n, err = s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
 				if n < 0 || err != nil {
 					s.conn.CloseWrite()
@@ -142,28 +142,31 @@ func (s *ServiceChannel) OnWrite() {
 			}
 
 			logger.Info("wt %v,rt %v,cap %v,size %v", s.out.GetWrite(), s.out.GetRead(), s.out.Len(), s.out.GetReadSize())
-			*/
-			m, err := s.queue.Get()
-			if err != nil {
-				continue
-			}
-			if msg, ok := m.(msg.Message); ok {
-				if err := s.proto.Encode(msg, s.out); err != nil {
-					logger.Error("s.protocol.Encode error %v", err)
-					s.conn.Close()
-					return
-				}
-				n, err = s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
-				if n < 0 || err != nil {
-					s.conn.CloseWrite()
-					return
-				}
-				s.out.Consume(uint64(n))
-				//logger.Info("n %v,wt %v,rt %v,cap %v,size %v", n, s.out.GetWrite(), s.out.GetRead(), s.out.Len(), s.out.GetReadSize())
-			}
-		}
 
+		}
+	}*/
+	/*m, err := s.queue.Get()
+	if err != nil {
+		continue
+	}*/
+	//if msg, ok := m.(msg.Message); ok {
+	/*	if err := s.proto.Encode(msg, s.out); err != nil {
+			logger.Error("s.protocol.Encode error %v", err)
+			s.conn.Close()
+			return
+		}
+	*/
+	for s.out.GetReadSize() > 0 {
+		n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
+		if n < 0 || err != nil {
+			s.conn.CloseWrite()
+			return
+		}
+		s.out.Consume(uint64(n))
 	}
+	//logger.Info("n %v,wt %v,rt %v,cap %v,size %v", n, s.out.GetWrite(), s.out.GetRead(), s.out.Len(), s.out.GetReadSize())
+	//}
+
 }
 
 func (s *ServiceChannel) DecodeMessage() error {
@@ -184,12 +187,12 @@ func (s *ServiceChannel) DecodeMessage() error {
 }
 
 func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
-	/*if err := s.proto.Encode(msg, s.out); err != nil {
+	if err := s.proto.Encode(msg, s.out); err != nil {
 		logger.Error("s.protocol.Encode error %v", err)
 		s.conn.Close()
 		return
-	}*/
-	s.queue.Put(msg)
+	}
+	//s.queue.Put(msg)
 }
 
 func (s *ServiceChannel) Serve(msg msg.Message) {
