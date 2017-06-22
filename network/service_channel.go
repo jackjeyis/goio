@@ -39,7 +39,7 @@ func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol,
 		out:        queue.NewIOBuffer(false),
 		conn:       conn,
 		close:      make(chan struct{}),
-		write:      make(chan struct{}),
+		write:      make(chan msg.Message),
 		attrs:      make(map[string]string),
 		proto:      proto,
 		io_service: io_srv,
@@ -79,7 +79,7 @@ func (s *ServiceChannel) OnRead() {
 		s.in.Reset()
 		s.out.Reset()
 		s.conn.Close()
-		close(s.write)
+		close(s.close)
 	}()
 L:
 	for {
@@ -159,8 +159,14 @@ func (s *ServiceChannel) OnWrite() {
 			return
 		}
 	*/
+	var msg msg.Message
 	for {
-		<-s.write
+		msg = <-s.write
+		if err := s.proto.Encode(msg, s.out); err != nil {
+			logger.Error("s.protoco.Encode error %v", err)
+			s.conn.Close()
+			return
+		}
 		n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
 		if n < 0 || err != nil {
 			s.conn.CloseWrite()
@@ -168,8 +174,6 @@ func (s *ServiceChannel) OnWrite() {
 		}
 		s.out.Consume(uint64(n))
 	}
-	//logger.Info("n %v,wt %v,rt %v,cap %v,size %v", n, s.out.GetWrite(), s.out.GetRead(), s.out.Len(), s.out.GetReadSize())
-	//}
 
 }
 
@@ -191,13 +195,17 @@ func (s *ServiceChannel) DecodeMessage() error {
 }
 
 func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
-	if err := s.proto.Encode(msg, s.out); err != nil {
+	/*if err := s.proto.Encode(msg, s.out); err != nil {
 		logger.Error("s.protocol.Encode error %v", err)
 		s.conn.Close()
 		close(s.write)
 		return
+	}*/
+	select {
+	case <-s.close:
+		close(s.write)
+	case s.write <- msg:
 	}
-	s.write <- struct{}{}
 	//s.queue.Put(msg)
 }
 
