@@ -26,5 +26,4 @@ func NewIOHandler() *IOHandler {
 
 func (ih *IOHandler) Handle(msg msg.Message) {
 	msg.Channel().EncodeMessage(msg)
-	msg.Channel().OnWrite()
 }

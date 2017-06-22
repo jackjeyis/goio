@@ -20,6 +20,7 @@ const (
 type ServiceChannel struct {
 	close      chan struct{}
 	quit       chan struct{}
+	write      chan struct{}
 	in         *queue.IOBuffer
 	out        *queue.IOBuffer
 	conn       *net.TCPConn
@@ -38,6 +39,7 @@ func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol,
 		out:        queue.NewIOBuffer(false),
 		conn:       conn,
 		close:      make(chan struct{}),
+		write:      make(chan struct{}),
 		attrs:      make(map[string]string),
 		proto:      proto,
 		io_service: io_srv,
@@ -77,6 +79,7 @@ func (s *ServiceChannel) OnRead() {
 		s.in.Reset()
 		s.out.Reset()
 		s.conn.Close()
+		close(s.write)
 	}()
 L:
 	for {
@@ -156,7 +159,8 @@ func (s *ServiceChannel) OnWrite() {
 			return
 		}
 	*/
-	for s.out.GetReadSize() > 0 {
+	for {
+		<-s.write
 		n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
 		if n < 0 || err != nil {
 			s.conn.CloseWrite()
@@ -190,8 +194,10 @@ func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
 	if err := s.proto.Encode(msg, s.out); err != nil {
 		logger.Error("s.protocol.Encode error %v", err)
 		s.conn.Close()
+		close(s.write)
 		return
 	}
+	s.write <- struct{}{}
 	//s.queue.Put(msg)
 }
 

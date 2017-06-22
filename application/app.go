@@ -199,13 +199,9 @@ func (app *GenericApplication) ParseCmd() error {
 }
 
 func (app *GenericApplication) InitApp() (err error) {
-	/*if *daemon_mode {
-		if err = util.Daemon(); err != nil {
-			return
-		}
+	if *daemon_mode {
+		util.Daemon()
 	}
-	*/
-	util.Daemon()
 	return nil
 }
 
@@ -231,7 +227,11 @@ func (app *GenericApplication) StartLogger() (err error) {
 	} else {
 		path = app.logger_config
 	}
-	logger.Start(logger.LogFilePath(path), logger.EveryHour, logger.PrintStack)
+	if *daemon_mode {
+		logger.Start(logger.LogFilePath(path), logger.EveryHour, logger.PrintStack)
+	} else {
+		logger.Start(logger.EveryHour, logger.PrintStack)
+	}
 	return nil
 }
 

@@ -173,7 +173,7 @@ func main() {
 			}
 			httpServer.SetKeepAlivesEnabled(true)
 			addr := util.GetHttpConfig().Localaddr
-			ln, err := net.Listen("tcp", "0.0.0.0:7172")
+			ln, err := net.Listen("tcp", addr)
 			if err != nil {
 				logger.Error("net.Listen %s error %v", addr)
 				panic(err)
