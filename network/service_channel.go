@@ -20,7 +20,7 @@ const (
 type ServiceChannel struct {
 	close      chan struct{}
 	quit       chan struct{}
-	write      chan struct{}
+	write      chan msg.Message
 	in         *queue.IOBuffer
 	out        *queue.IOBuffer
 	conn       *net.TCPConn

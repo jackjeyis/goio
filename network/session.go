@@ -46,16 +46,16 @@ func NewRoom(id string) *Room {
 func (r *Room) addChan(cid, uid string, ch msg.Channel) {
 	c, _ := r.chs.Lookup([]byte(uid))
 	if c == nil {
-		c = make(map[string]msg.Channel)
+		c = util.New(nil)
 		r.chs.Insert([]byte(uid), c)
 	}
-	c.(map[string]msg.Channel)[cid] = ch
+	c.(*util.Ctrie).Insert([]byte(cid), ch)
 }
 
 func (r *Room) getMember() (chans []msg.Channel, uids []string, rcount int) {
 	for entry := range r.chs.Iterator(nil) {
-		for _, ch := range entry.Value.(map[string]msg.Channel) {
-			chans = append(chans, ch)
+		for item := range entry.Value.(*util.Ctrie).Iterator(nil) {
+			chans = append(chans, item.Value.(msg.Channel))
 		}
 		uids = append(uids, string(entry.Key))
 		rcount += 1
@@ -66,9 +66,9 @@ func (r *Room) getMember() (chans []msg.Channel, uids []string, rcount int) {
 func (r *Room) deleteChan(cid, uid string) {
 	c, _ := r.chs.Lookup([]byte(uid))
 	if c != nil {
-		ch := c.(map[string]msg.Channel)
-		delete(ch, cid)
-		if len(ch) == 0 {
+		ch := c.(*util.Ctrie)
+		ch.Remove([]byte(cid))
+		if ch.Size() == 0 {
 			r.chs.Remove([]byte(uid))
 		}
 	}
