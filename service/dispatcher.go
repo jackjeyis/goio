@@ -97,10 +97,10 @@ func (d *Dispatcher) Stop() {
 	if d.status != DISPATCHER_STOPPED {
 		d.status = DISPATCHER_STOPPED
 		close(d.stop)
-		//close(d.queue)
 		for _, worker := range d.workers {
 			worker.Stop()
 		}
+		d.Wait()
 		close(d.workerPool)
 	}
 }
@@ -116,12 +116,12 @@ func (d *Dispatcher) Dispatch() {
 		select {
 		case m := <-d.queue:
 			if m != nil {
-				go func(msg msg.Message) {
+				//go func(msg msg.Message) {
 					jobChannel := <-d.workerPool
 					if jobChannel != nil {
-						jobChannel <- msg
+						jobChannel <- m
 					}
-				}(m)
+				//}(m)
 			}
 		case <-d.stop:
 			return

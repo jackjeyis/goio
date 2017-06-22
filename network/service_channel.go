@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"time"
+	"errors"
 
 	"goio/logger"
 	"goio/msg"
@@ -27,7 +28,6 @@ type ServiceChannel struct {
 	io_service *service.IOService
 	service    msg.Service
 	attrs      map[string]string
-	queue      *queue.Sequence
 }
 
 func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol,
@@ -43,7 +43,6 @@ func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol,
 		io_service: io_srv,
 		service:    srv,
 		quit:       q,
-		queue:      queue.NewSequence(4096),
 	}
 }
 
@@ -80,6 +79,10 @@ func (s *ServiceChannel) OnRead() {
 	}()
 L:
 	for {
+		select {
+		case <-s.quit:
+			return
+		default:
 		wt, err = s.in.EnsureWrite(per_read_size)
 		if err != nil {
 			logger.Error("EnsureWrite %v", err)
@@ -107,6 +110,7 @@ L:
 
 			break L
 		}
+	      }
 	}
 }
 
@@ -177,6 +181,9 @@ func (s *ServiceChannel) DecodeMessage() error {
 			return e
 		}
 		m.SetChannel(s)
+		if s.io_service.GetServiceStage().Stopped() {
+			return errors.New("Service Stage Stop!")
+		}
 		s.io_service.GetServiceStage().Send(m)
 		s.in.SetInit(true)
 	}

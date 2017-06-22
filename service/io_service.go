@@ -13,6 +13,7 @@ type Stage interface {
 	Wait()
 	Stop()
 	Send(msg.Message)
+	Stopped() bool
 }
 
 type ServiceStage struct {
@@ -37,12 +38,11 @@ func (ss *ServiceStage) Stop() {
 }
 
 func (ss *ServiceStage) Send(msg msg.Message) {
-	select {
-	case <-ss.stage.stop:
-		close(ss.stage.queue)
-		return
-	case ss.stage.queue <- msg:
-	}
+	ss.stage.queue <- msg
+}
+
+func (ss *ServiceStage) Stopped() bool {
+	return ss.stage.status == DISPATCHER_STOPPED
 }
 
 type IOStage struct {
@@ -67,12 +67,11 @@ func (io *IOStage) Stop() {
 }
 
 func (io *IOStage) Send(msg msg.Message) {
-	select {
-	case <-io.stage.stop:
-		close(io.stage.queue)
-		return
-	case io.stage.queue <- msg:
-	}
+	io.stage.queue <- msg
+}
+
+func (io *IOStage) Stopped() bool {
+	return io.stage.status == DISPATCHER_STOPPED
 }
 
 type IOServiceConfig struct {
