@@ -32,14 +32,14 @@ type Session struct {
 type Room struct {
 	chs  *util.Ctrie
 	rid  string
-	host map[string]msg.Channel
+	host *util.Ctrie
 }
 
 func NewRoom(id string) *Room {
 	return &Room{
 		chs:  util.New(nil),
 		rid:  id,
-		host: make(map[string]msg.Channel),
+		host: util.New(nil),
 	}
 }
 
@@ -86,7 +86,7 @@ func (s *Session) insert(cid string, ch msg.Channel, host int) {
 		room = r.(*Room)
 	}
 	if host != 2 {
-		room.host[cid] = ch
+		room.host.Insert([]byte(cid), ch)
 	}
 	room.addChan(cid, ch.GetAttr("uid"), ch)
 }
@@ -102,7 +102,7 @@ func (s *Session) delete(cid, uid, rid string) {
 			s.room.Remove([]byte(rid))
 		} else {
 			r.deleteChan(cid, uid)
-			delete(r.host, cid)
+			r.host.Remove([]byte(cid))
 		}
 	}
 }
@@ -174,8 +174,8 @@ func NotifyHost(rid, cid, uid string, code int8) {
 		logger.Error("util.StoreMessage error %v", err)
 	}
 	if code == 0 {
-		for _, ch := range r.host {
-			Push(ch, body)
+		for item := range r.host.Iterator(nil) {
+			Push(item.Value.(msg.Channel), body)
 		}
 	} else {
 		PushRoom(rid, cid, body)
