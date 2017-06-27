@@ -2,7 +2,7 @@ package queue
 
 import (
 	"errors"
-	"runtime"
+	"sync"
 	"sync/atomic"
 )
 
@@ -20,6 +20,7 @@ type Sequence struct {
 	mask, disposed uint64
 	padding3       [8]uint64
 	nodes          []*node
+	cond           *sync.Cond
 }
 
 func roundUp(num uint64) uint64 {
@@ -40,6 +41,7 @@ func (s *Sequence) init(size uint64) {
 	for i := uint64(0); i < size; i++ {
 		s.nodes[i] = &node{pos: i}
 	}
+	s.cond = sync.NewCond(new(sync.Mutex))
 	s.mask = size - 1
 }
 
@@ -52,7 +54,7 @@ func NewSequence(size uint64) *Sequence {
 func (s *Sequence) put(item interface{}, offer bool) (bool, error) {
 	var (
 		n *node
-		i int
+		//		i int
 	)
 	pos := atomic.LoadUint64(&s.produce)
 L:
@@ -78,15 +80,18 @@ L:
 			return false, nil
 		}
 
-		if i == 10000 {
+		/*if i == 10000 {
 			runtime.Gosched()
 			i = 0
 		} else {
 			i++
-		}
+		}*/
 	}
 	n.data = item
 	atomic.StoreUint64(&n.pos, pos+1)
+	s.cond.L.Lock()
+	s.cond.Broadcast()
+	s.cond.L.Unlock()
 	return true, nil
 }
 
@@ -103,12 +108,12 @@ func (s *Sequence) Offer(item interface{}) error {
 func (s *Sequence) Get() (interface{}, error) {
 	var n *node
 	pos := atomic.LoadUint64(&s.consume)
-	//i := 0
 L:
 	for {
 		if s.Disposed() {
 			return nil, errors.New("disposed")
 		}
+		s.cond.L.Lock()
 		n = s.nodes[pos&s.mask]
 		seq := atomic.LoadUint64(&n.pos)
 
@@ -122,14 +127,8 @@ L:
 		case diff > 0:
 			pos = atomic.LoadUint64(&s.consume)
 		}
-
-		/*if i == 10000 {
-			runtime.Gosched()
-			i = 0
-		} else {
-			i++
-		}*/
-		return nil, errors.New("no item")
+		s.cond.Wait()
+		s.cond.L.Unlock()
 	}
 
 	data := n.data
@@ -156,4 +155,5 @@ func (s *Sequence) Reset() {
 	s.mask = 0
 	s.nodes = s.nodes[:0]
 	s.disposed = 1
+	s.cond.Broadcast()
 }

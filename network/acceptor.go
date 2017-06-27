@@ -10,25 +10,17 @@ import (
 	"time"
 )
 
-type Leave struct {
-	Cid  string
-	Rid  string
-	Body []byte
-}
-
-var Disconn chan *Leave
-
 type Acceptor struct {
-	io_service *service.IOService
-	service    msg.Service
-	addr       string
-	ln         *net.TCPListener
-	proto      protocol.Protocol
-	quit       chan struct{}
+	io_service  *service.IOService
+	service     msg.Service
+	addr        string
+	ln          *net.TCPListener
+	proto       protocol.Protocol
+	quit        chan struct{}
+	freeChannel *ServiceChannel
 }
 
 func NewAcceptor(io_srv *service.IOService, srv msg.Service, address string, proto protocol.Protocol) *Acceptor {
-	Disconn = make(chan *Leave, 100)
 	return &Acceptor{
 		io_service: io_srv,
 		service:    srv,
@@ -94,19 +86,23 @@ func acceptTCP(a *Acceptor) {
 		}
 
 		//conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
-		serviceChannel := NewServiceChannel(
-			conn,
-			a.proto,
-			a.io_service,
-			a.service,
-			a.quit,
-		)
-
-		serviceChannel.Start()
-
+		sch := a.allocChannel()
+		InitChannel(sch, a, conn)
+		sch.Start()
 	}
 }
 func (a *Acceptor) Stop() {
 	a.ln.Close()
 	close(a.quit)
+}
+
+func (a *Acceptor) allocChannel() *ServiceChannel {
+	ch := a.freeChannel
+	if ch == nil {
+		ch = new(ServiceChannel)
+	} else {
+		a.freeChannel = ch.next
+		*ch = ServiceChannel{}
+	}
+	return ch
 }

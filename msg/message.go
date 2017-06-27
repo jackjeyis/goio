@@ -9,6 +9,8 @@ type Message interface {
 	Type() uint8
 	SetChannel(Channel)
 	Channel() Channel
+	HandlerId() int
+	SetHandlerId(int)
 }
 
 type IOMessage interface {

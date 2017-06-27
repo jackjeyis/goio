@@ -146,6 +146,7 @@ func writeHeader(b *queue.IOBuffer, h *Header, variableHeader *queue.ByteBuffer,
 }
 
 type MqttConnect struct {
+	id              int
 	channel         msg.Channel
 	ProtocolName    string
 	ProtocolVersion uint8
@@ -173,6 +174,14 @@ func (c *MqttConnect) SetChannel(ch msg.Channel) {
 
 func (c *MqttConnect) Channel() msg.Channel {
 	return c.channel
+}
+
+func (c *MqttConnect) SetHandlerId(i int) {
+	c.id = i
+}
+
+func (c *MqttConnect) HandlerId() int {
+	return c.id
 }
 
 func (c *MqttConnect) Decode(b *queue.IOBuffer, remainLen int32) (err error) {
@@ -234,6 +243,7 @@ func (c *MqttConnect) Encode(b *queue.IOBuffer) error {
 }
 
 type MqttConnAck struct {
+	id      int
 	channel msg.Channel
 	RetCode ReturnCode
 }
@@ -248,6 +258,14 @@ func (c *MqttConnAck) SetChannel(ch msg.Channel) {
 
 func (c *MqttConnAck) Channel() msg.Channel {
 	return c.channel
+}
+
+func (c *MqttConnAck) SetHandlerId(i int) {
+	c.id = i
+}
+
+func (c *MqttConnAck) HandlerId() int {
+	return c.id
 }
 
 func (c *MqttConnAck) Encode(b *queue.IOBuffer) error {
@@ -274,6 +292,7 @@ func (c *MqttConnAck) Decode(b *queue.IOBuffer, remainLen int32) error {
 }
 
 type MqttPublish struct {
+	id      int
 	channel msg.Channel
 	Header
 	Topic   []byte
@@ -291,6 +310,14 @@ func (p *MqttPublish) SetChannel(ch msg.Channel) {
 
 func (p *MqttPublish) Channel() msg.Channel {
 	return p.channel
+}
+
+func (p *MqttPublish) SetHandlerId(i int) {
+	p.id = i
+}
+
+func (p *MqttPublish) HandlerId() int {
+	return p.id
 }
 
 var mutex sync.Mutex
@@ -324,6 +351,7 @@ func (p *MqttPublish) Decode(b *queue.IOBuffer, remainLen int32) error {
 }
 
 type MqttPubAck struct {
+	id      int
 	channel msg.Channel
 	MsgId   uint16
 }
@@ -338,6 +366,14 @@ func (p *MqttPubAck) SetChannel(ch msg.Channel) {
 
 func (p *MqttPubAck) Channel() msg.Channel {
 	return p.channel
+}
+
+func (p *MqttPubAck) SetHandlerId(i int) {
+	p.id = i
+}
+
+func (p *MqttPubAck) HandlerId() int {
+	return p.id
 }
 
 func (p *MqttPubAck) Encode(b *queue.IOBuffer) error {
@@ -360,6 +396,7 @@ func (p *MqttPubAck) Decode(b *queue.IOBuffer, remainLen int32) error {
 }
 
 type MqttPingReq struct {
+	id      int
 	channel msg.Channel
 }
 
@@ -373,6 +410,14 @@ func (p *MqttPingReq) SetChannel(ch msg.Channel) {
 
 func (p *MqttPingReq) Channel() msg.Channel {
 	return p.channel
+}
+
+func (p *MqttPingReq) SetHandlerId(i int) {
+	p.id = i
+}
+
+func (p *MqttPingReq) HandlerId() int {
+	return p.id
 }
 
 func (p *MqttPingReq) Encode(b *queue.IOBuffer) error {
@@ -391,6 +436,7 @@ func (p *MqttPingReq) Decode(b *queue.IOBuffer, remainLen int32) error {
 }
 
 type MqttPingRes struct {
+	id      int
 	channel msg.Channel
 }
 
@@ -404,6 +450,14 @@ func (p *MqttPingRes) SetChannel(ch msg.Channel) {
 
 func (p *MqttPingRes) Channel() msg.Channel {
 	return p.channel
+}
+
+func (p *MqttPingRes) SetHandlerId(i int) {
+	p.id = i
+}
+
+func (p *MqttPingRes) HandlerId() int {
+	return p.id
 }
 
 func (p *MqttPingRes) Encode(b *queue.IOBuffer) error {
@@ -422,6 +476,7 @@ func (p *MqttPingRes) Decode(b *queue.IOBuffer, remainLen int32) error {
 }
 
 type MqttDisConnect struct {
+	id      int
 	channel msg.Channel
 }
 
@@ -435,6 +490,14 @@ func (c *MqttDisConnect) SetChannel(ch msg.Channel) {
 
 func (c *MqttDisConnect) Channel() msg.Channel {
 	return c.channel
+}
+
+func (c *MqttDisConnect) SetHandlerId(i int) {
+	c.id = i
+}
+
+func (c *MqttDisConnect) HandlerId() int {
+	return c.id
 }
 
 func (c *MqttDisConnect) Encode(b *queue.IOBuffer) error {

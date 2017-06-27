@@ -171,11 +171,7 @@ func (app *GenericApplication) Stop() (err error) {
 	}
 
 	logger.Info("Application:StopServiceManager")
-	if err = app.StopServiceManager(); err != nil {
-		return err
-	}
-
-	//time.Sleep(5 * time.Second)
+	app.StopServiceManager()
 	if err = app.StopIOService(); err != nil {
 		return err
 	}
@@ -303,11 +299,6 @@ func (app *GenericApplication) StartServiceManager() (err error) {
 		}
 
 		go acceptor.Start()
-		//logger.Error("Application.StartServiceManager acceptor.Start fail, address:%s,name:%s",
-		//service_config.addr, service_config.name)
-
-		//logger.Info("Application.StartServiceManager , address:%s,name:%s",
-		//service_config.addr, service_config.name)
 
 		app.acceptors = append(app.acceptors, acceptor)
 	}

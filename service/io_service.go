@@ -13,7 +13,6 @@ type Stage interface {
 	Wait()
 	Stop()
 	Send(msg.Message)
-	Stopped() bool
 }
 
 type ServiceStage struct {
@@ -38,11 +37,7 @@ func (ss *ServiceStage) Stop() {
 }
 
 func (ss *ServiceStage) Send(msg msg.Message) {
-	ss.stage.queue <- msg
-}
-
-func (ss *ServiceStage) Stopped() bool {
-	return ss.stage.status == DISPATCHER_STOPPED
+	ss.stage.Send(msg)
 }
 
 type IOStage struct {
@@ -67,11 +62,7 @@ func (io *IOStage) Stop() {
 }
 
 func (io *IOStage) Send(msg msg.Message) {
-	io.stage.queue <- msg
-}
-
-func (io *IOStage) Stopped() bool {
-	return io.stage.status == DISPATCHER_STOPPED
+	io.stage.Send(msg)
 }
 
 type IOServiceConfig struct {
@@ -96,6 +87,8 @@ func (s *IOService) Init(c IOServiceConfig) error {
 	s.io_stage = &IOStage{worker_count: c.Ioworker, queue_size: c.Ioqueue}
 	return nil
 }
+
+var quit chan struct{}
 
 func (s *IOService) Start() {
 	s.service_stage.Start()

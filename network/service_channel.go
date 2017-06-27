@@ -4,13 +4,11 @@ import (
 	"io"
 	"net"
 	"time"
-	"errors"
 
 	"goio/logger"
 	"goio/msg"
 	"goio/protocol"
 	"goio/queue"
-	"goio/service"
 )
 
 const (
@@ -19,31 +17,20 @@ const (
 )
 
 type ServiceChannel struct {
-	close      chan struct{}
-	quit       chan struct{}
-	in         *queue.IOBuffer
-	out        *queue.IOBuffer
-	conn       *net.TCPConn
-	proto      protocol.Protocol
-	io_service *service.IOService
-	service    msg.Service
-	attrs      map[string]string
+	in       *queue.IOBuffer
+	out      *queue.IOBuffer
+	conn     *net.TCPConn
+	attrs    map[string]string
+	acceptor *Acceptor
+	next     *ServiceChannel
 }
 
-func NewServiceChannel(conn *net.TCPConn, proto protocol.Protocol,
-	io_srv *service.IOService, srv msg.Service,
-	q chan struct{}) *ServiceChannel {
-	return &ServiceChannel{
-		in:         queue.NewIOBuffer(true),
-		out:        queue.NewIOBuffer(false),
-		conn:       conn,
-		close:      make(chan struct{}),
-		attrs:      make(map[string]string),
-		proto:      proto,
-		io_service: io_srv,
-		service:    srv,
-		quit:       q,
-	}
+func InitChannel(sch *ServiceChannel, a *Acceptor, c *net.TCPConn) {
+	sch.in = queue.NewIOBuffer(true)
+	sch.out = queue.NewIOBuffer(false)
+	sch.conn = c
+	sch.acceptor = a
+	sch.attrs = make(map[string]string)
 }
 
 func (s *ServiceChannel) SetAttr(key, value string) {
@@ -75,18 +62,19 @@ func (s *ServiceChannel) OnRead() {
 		s.in.Reset()
 		s.out.Reset()
 		s.conn.Close()
-		close(s.close)
 	}()
+
 L:
 	for {
 		select {
-		case <-s.quit:
-			return
+		case <-s.acceptor.quit:
+			break L
 		default:
+		}
 		wt, err = s.in.EnsureWrite(per_read_size)
 		if err != nil {
 			logger.Error("EnsureWrite %v", err)
-			return
+			break L
 		}
 
 		n, err = s.conn.Read(s.in.Buffer()[wt:])
@@ -100,7 +88,6 @@ L:
 			break L
 		}
 		s.in.Produce(uint64(n))
-		//logger.Info("n bytes %v,wt %v,rt %v,size %v,read size %v", n, s.in.GetWrite(), s.in.GetRead(), s.in.Len(), s.in.GetReadSize())
 		err = s.DecodeMessage()
 		if err != nil {
 			logger.Info("Decode error %v", err)
@@ -110,19 +97,18 @@ L:
 
 			break L
 		}
-	      }
 	}
 }
 
 func (s *ServiceChannel) OnWrite() {
 	/*var (
 		n int
-	)*/
-	/*defer func() {
+	)
+	defer func() {
 		s.out.Reset()
 	}()
-
-	for {
+	*/
+	/*for {
 		select {
 		case <-s.quit:
 			s.conn.Close()
@@ -149,21 +135,36 @@ func (s *ServiceChannel) OnWrite() {
 
 		}
 	}*/
-	/*m, err := s.queue.Get()
-	if err != nil {
-		continue
-	}*/
-	//if msg, ok := m.(msg.Message); ok {
-	/*	if err := s.proto.Encode(msg, s.out); err != nil {
-			logger.Error("s.protocol.Encode error %v", err)
-			s.conn.Close()
+	/*for {
+		select {
+		case <-s.acceptor.quit:
+			s.queue.Reset()
 			return
+		default:
+			m, err := s.queue.Get()
+			logger.Info("msg %v,err %v", m, err)
+			if err != nil {
+				continue
+			}
+			if msg, ok := m.(msg.Message); ok {
+				if err := s.acceptor.proto.Encode(msg, s.out); err != nil {
+					logger.Error("s.protocol.Encode error %v", err)
+					s.conn.Close()
+					return
+				}
+			}
+			n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
+			if n < 0 || err != nil {
+				s.conn.Close()
+				return
+			}
+			s.out.Consume(uint64(n))
 		}
-	*/
+	}*/
 	for s.out.GetReadSize() > 0 {
 		n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
 		if n < 0 || err != nil {
-			s.conn.CloseWrite()
+			//s.conn.CloseWrite()
 			return
 		}
 		s.out.Consume(uint64(n))
@@ -176,22 +177,19 @@ func (s *ServiceChannel) DecodeMessage() error {
 		e error
 	)
 	for s.in.GetReadSize() > 0 && e == nil {
-		m, e = s.proto.Decode(s.in)
+		m, e = s.acceptor.proto.Decode(s.in)
 		if e != nil {
 			return e
 		}
 		m.SetChannel(s)
-		if s.io_service.GetServiceStage().Stopped() {
-			return errors.New("Service Stage Stop!")
-		}
-		s.io_service.GetServiceStage().Send(m)
+		s.acceptor.io_service.GetServiceStage().Send(m)
 		s.in.SetInit(true)
 	}
 	return nil
 }
 
 func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
-	if err := s.proto.Encode(msg, s.out); err != nil {
+	if err := s.acceptor.proto.Encode(msg, s.out); err != nil {
 		logger.Error("s.protocol.Encode error %v", err)
 		s.conn.Close()
 		return
@@ -199,20 +197,18 @@ func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
 }
 
 func (s *ServiceChannel) Serve(msg msg.Message) {
-	s.service.Serve(msg)
+	s.acceptor.service.Serve(msg)
 }
 
 func (s *ServiceChannel) GetIOService() msg.Service {
-	return s.io_service
+	return s.acceptor.io_service
 }
 
 func (s *ServiceChannel) SetDeadline(timestamp int) {
-	s.conn.SetReadDeadline(time.Now().Add(time.Duration(timestamp) * time.Second))
+	s.conn.SetDeadline(time.Now().Add(time.Duration(timestamp) * time.Second))
 }
 
-func (s *ServiceChannel) OnClose() {
-	close(s.close)
-}
+func (s *ServiceChannel) OnClose() {}
 
 func (s *ServiceChannel) Close() {
 	s.conn.Close()

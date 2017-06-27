@@ -84,6 +84,7 @@ func (br *BarrageHeader) Encode(b *queue.IOBuffer, rLen int32) error {
 }
 
 type Barrage struct {
+	id      int
 	channel msg.Channel
 	BarrageHeader
 	Body []byte
@@ -101,6 +102,13 @@ func (br *Barrage) Channel() msg.Channel {
 	return br.channel
 }
 
+func (br *Barrage) SetHandlerId(i int) {
+	br.id = i
+}
+
+func (br *Barrage) HandlerId() int {
+	return br.id
+}
 func (br *Barrage) Decode(b *queue.IOBuffer, rLen int32) (err error) {
 	br.Body = b.Read(uint64(rLen))
 	return nil
