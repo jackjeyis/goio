@@ -97,12 +97,12 @@ func (a *Acceptor) Stop() {
 }
 
 func (a *Acceptor) allocChannel() *ServiceChannel {
-	ch := a.freeChannel
+	/*ch := a.freeChannel
 	if ch == nil {
 		ch = new(ServiceChannel)
 	} else {
 		a.freeChannel = ch.next
 		*ch = ServiceChannel{}
-	}
-	return ch
+	}*/
+	return &ServiceChannel{}
 }
