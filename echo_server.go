@@ -242,7 +242,7 @@ func retWrite(w http.ResponseWriter, r *http.Request, res map[string]interface{}
 	if _, err := w.Write(data); err != nil {
 		logger.Error("w.Write error %v", err)
 	}
-	logger.Info("req: \"%s\",get: ip:\"%s\",time:\"%fs\"", r.URL.String(), r.RemoteAddr, time.Now().Sub(start).Seconds())
+	//logger.Info("req: \"%s\",get: ip:\"%s\",time:\"%fs\"", r.URL.String(), r.RemoteAddr, time.Now().Sub(start).Seconds())
 }
 
 func PushRoom(w http.ResponseWriter, r *http.Request) {
@@ -280,7 +280,7 @@ func GetRoom(w http.ResponseWriter, r *http.Request) {
 
 	defer retWrite(w, r, res, time.Now())
 	w.Header().Set("Content-Type", "application/json")
-	logger.Info("rid %v", param.Get("rid"))
+	//logger.Info("rid %v", param.Get("rid"))
 	count, uids := network.GetRoomStatus(param.Get("rid"))
 	if uids == nil {
 		res["ret"] = 2
