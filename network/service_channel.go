@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"time"
+	"unsafe"
 
 	"goio/logger"
 	"goio/msg"
@@ -182,6 +183,7 @@ func (s *ServiceChannel) DecodeMessage() error {
 			return e
 		}
 		m.SetChannel(s)
+		m.SetHandlerId(int(uintptr(unsafe.Pointer(s))))
 		s.acceptor.io_service.GetServiceStage().Send(m)
 		s.in.SetInit(true)
 	}

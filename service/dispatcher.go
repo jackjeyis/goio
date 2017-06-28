@@ -35,7 +35,6 @@ func (w *Worker) Start() {
 		for w.running {
 			msg := <-w.jobChannel
 			if msg != nil {
-				msg.SetHandlerId(w.id)
 				w.handler.Handle(msg)
 			}
 		}

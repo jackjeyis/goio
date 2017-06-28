@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/samuel/go-zookeeper/zk"
@@ -33,6 +34,8 @@ var (
 	app  *application.GenericApplication
 	auth Auth
 )
+
+var m sync.Mutex
 
 func main() {
 
@@ -79,7 +82,10 @@ func main() {
 			}
 		})
 		app.RegisterService("barrage_handler", func(msg msg.Message) {
+			defer m.Unlock()
+			m.Lock()
 			barrage := msg.(*protocol.Barrage)
+			logger.Info("barrage %v", barrage)
 			if barrage == nil {
 				return
 			}
@@ -102,6 +108,7 @@ func main() {
 					return
 				}
 				barrage.Op = 8
+
 				res, err := util.Get("http://" + util.GetHttpConfig().Remoteaddr + "/im/" + auth.Rid + "/_check?token=" + auth.Token)
 				if err != nil {
 					logger.Error("check token api error %v", err)
@@ -129,6 +136,7 @@ func main() {
 
 				ch := network.GetSession(auth.Cid)
 				if ch != nil {
+					logger.Info("channel %v,cid %v", ch, auth.Cid)
 					reply.Code = 0
 					reply.Msg = "该用户重新连接,踢出老的登录设备!"
 					ch.Close()
@@ -148,6 +156,7 @@ func main() {
 				barrage.Channel().SetAttr("uid", res.Data.UserId)
 				barrage.Channel().SetAttr("rid", auth.Rid)
 				barrage.Channel().SetAttr("ct", util.GetClientType(auth.Cid))
+				logger.Info("Register %v", auth.Cid)
 				network.Register(auth.Cid, barrage.Channel(), res.Data.Role)
 				barrage.Channel().GetIOService().Serve(barrage)
 				network.NotifyHost(auth.Rid, auth.Cid, res.Data.UserId, 1)
