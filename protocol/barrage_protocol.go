@@ -40,8 +40,8 @@ var (
 type Notify struct {
 	Id   string `json:"id"`
 	Ct   int    `json:"ct"`
-	Rid  int32  `json:"roomId"`
-	Uid  int64  `json:"fromId"`
+	Rid  string `json:"roomId"`
+	Uid  string `json:"fromId"`
 	Code int8   `json:"code"`
 	Time int64  `json:"time"`
 }

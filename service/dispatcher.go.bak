@@ -1,57 +1,43 @@
 package service
 
 import (
+	"goio/logger"
 	"goio/msg"
+	"goio/util"
 	"sync"
 )
 
-const (
-	WORKER_STARTED = iota
-	WORKER_STOPPED
-	DISPATHER_STARTED
-	DISPATHER_STOPPED
-)
-
 type Worker struct {
-	workerPool chan chan msg.Message
 	jobChannel chan msg.Message
-	quit       chan struct{}
 	handler    Handler
 	wg         *sync.WaitGroup
 	running    bool
 	id         int
-	status     byte
 }
 
 type Dispatcher struct {
 	queue      chan msg.Message
-	workerPool chan chan msg.Message
 	maxWorkers int
 	workers    []*Worker
-	status     byte
-	stop       chan struct{}
 }
 
-func NewWorker(i int, h Handler, pool chan chan msg.Message) *Worker {
+func NewWorker(i int, h Handler) *Worker {
 	return &Worker{
-		workerPool: pool,
 		handler:    h,
-		jobChannel: make(chan msg.Message),
+		jobChannel: make(chan msg.Message, 1000),
 		wg:         &sync.WaitGroup{},
 		id:         i,
 		running:    true,
-		quit:       make(chan struct{}),
 	}
 }
 
 func (w *Worker) Start() {
 	w.wg.Add(1)
-	w.status = WORKER_STARTED
 	go func() {
 		for w.running {
-			w.workerPool <- w.jobChannel
 			msg := <-w.jobChannel
 			if msg != nil {
+				logger.Info("msg id %v,goid %v", msg.HandlerId(), util.Goid())
 				w.handler.Handle(msg)
 			}
 		}
@@ -70,29 +56,24 @@ func (w *Worker) Wait() {
 
 func NewDispatcher(maxWorkers, maxQueue int) *Dispatcher {
 	return &Dispatcher{
-		workerPool: make(chan chan msg.Message, maxWorkers),
 		queue:      make(chan msg.Message, maxQueue),
 		maxWorkers: maxWorkers,
 		workers:    make([]*Worker, maxWorkers),
-		stop:       make(chan struct{}),
 	}
 }
 
 func (d *Dispatcher) Run(h Handler) {
 	for i := 0; i < d.maxWorkers; i++ {
-		worker := NewWorker(i, h, d.workerPool)
+		worker := NewWorker(i, h)
 		worker.Start()
 		d.workers[i] = worker
 	}
-	go d.Dispatch()
 }
 
 func (d *Dispatcher) Stop() {
-	close(d.stop)
 	for _, worker := range d.workers {
 		worker.Stop()
 	}
-	close(d.workerPool)
 }
 
 func (d *Dispatcher) Wait() {
@@ -101,25 +82,6 @@ func (d *Dispatcher) Wait() {
 	}
 }
 
-func (d *Dispatcher) Dispatch() {
-	for {
-		select {
-		case m := <-d.queue:
-			if m != nil {
-				go func(msg msg.Message) {
-					jobChannel := <-d.workerPool
-					if jobChannel != nil {
-						jobChannel <- msg
-					}
-				}(m)
-			}
-		case <-d.stop:
-			return
-		}
-	}
-}
-
 func (d *Dispatcher) Send(msg msg.Message) {
-	//d.workers[msg.HandlerId()%d.maxWorkers].jobChannel <- msg
-	d.queue <- msg
+	d.workers[msg.HandlerId()%d.maxWorkers].jobChannel <- msg
 }

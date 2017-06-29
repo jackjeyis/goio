@@ -5,7 +5,7 @@ import (
 	"goio/msg"
 	"goio/protocol"
 	"goio/util"
-	"strconv"
+	"unsafe"
 )
 
 var (
@@ -161,56 +161,62 @@ func NotifyHost(rid, cid, uid string, code int8) {
 	notify := protocol.Notify{}
 	notify.Id = util.UUID()
 	notify.Ct = 90010
-	Uid, _ := strconv.ParseInt(uid, 10, 64)
-	notify.Uid = Uid
-	Rid, _ := strconv.ParseInt(rid, 10, 32)
-	notify.Rid = int32(Rid)
+	notify.Uid = uid
+	notify.Rid = rid
 	notify.Code = code
 	notify.Time = util.GetMillis()
 	body, err := util.EncodeJson(notify)
-	err = util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+rid+"/view_record", body)
+	//err = util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+rid+"/view_record", body)
 
 	if err != nil {
 		logger.Error("util.StoreMessage error %v", err)
 	}
+	barrage := &protocol.Barrage{}
+	barrage.Ver = 1
+	barrage.Op = 5
+	barrage.Body = body
+	ch := NewChannel()
+	ch.SetAttr("rid", rid)
+	ch.SetAttr("cid", cid)
+	barrage.SetChannel(ch)
 	if code == 0 {
 		for item := range r.host.Iterator(nil) {
-			Push(item.Value.(msg.Channel), body)
+			ch := item.Value.(msg.Channel)
+			barrage.SetChannel(ch)
+			barrage.SetHandlerId(int(uintptr(unsafe.Pointer(ch.(*ServiceChannel)))))
+			Push(barrage)
 		}
 	} else {
-		PushRoom(rid, cid, body)
+		PushRoom(barrage)
 	}
 }
 
-func PushRoom(rid, cid string, body []byte) {
-	chans := GetRoomSession(rid)
+func PushRoom(barrage *protocol.Barrage) {
+	chans := GetRoomSession(barrage.Channel().GetAttr("rid"))
 	if chans == nil {
 		return
 	}
 	for _, c := range chans {
-		if c == nil || c.GetAttr("cid") == cid {
+		if c == nil || c.GetAttr("cid") == barrage.Channel().GetAttr("cid") {
 			continue
 		}
-		Push(c, body)
+		barrage.SetChannel(c)
+		barrage.SetHandlerId(int(uintptr(unsafe.Pointer(c.(*ServiceChannel)))))
+		Push(barrage)
 	}
 }
 
-func Push(ch msg.Channel, body []byte) {
-	msg := &protocol.Barrage{}
-	msg.Op = 5
-	msg.Ver = 1
-	msg.Body = body
-	msg.SetChannel(ch)
-	ch.GetIOService().Serve(msg)
+func Push(barrage *protocol.Barrage) {
+	barrage.Channel().GetIOService().Serve(barrage)
 }
 
-func BroadcastRoom(rid, cid string, body []byte, store bool) {
-	if store {
-		err := util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+rid+"/chat", body)
+func BroadcastRoom(barrage *protocol.Barrage, store bool) {
+	/*if store {
+		err := util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+barrage.Channel().GetAttr("rid")+"/chat", barrage.Body)
 
 		if err != nil {
 			logger.Error("util.StoreMessage error %v", err)
 		}
-	}
-	PushRoom(rid, cid, body)
+	}*/
+	PushRoom(barrage)
 }

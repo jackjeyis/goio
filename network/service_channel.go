@@ -34,6 +34,12 @@ func InitChannel(sch *ServiceChannel, a *Acceptor, c *net.TCPConn) {
 	sch.attrs = make(map[string]string)
 }
 
+func NewChannel() *ServiceChannel {
+	return &ServiceChannel{
+		attrs: make(map[string]string),
+	}
+}
+
 func (s *ServiceChannel) SetAttr(key, value string) {
 	s.attrs[key] = value
 }

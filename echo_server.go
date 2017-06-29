@@ -31,8 +31,7 @@ type AuthReply struct {
 }
 
 var (
-	app  *application.GenericApplication
-	auth Auth
+	app *application.GenericApplication
 )
 
 var m sync.Mutex
@@ -82,14 +81,12 @@ func main() {
 			}
 		})
 		app.RegisterService("barrage_handler", func(msg msg.Message) {
-			defer m.Unlock()
-			m.Lock()
 			barrage := msg.(*protocol.Barrage)
-			logger.Info("barrage %v", barrage)
 			if barrage == nil {
 				return
 			}
 
+			logger.Info("handlerId %v", barrage.HandlerId())
 			if barrage.Channel().GetAttr("status") != "OK" {
 				if barrage.Op != 7 {
 					logger.Info("handshake fail!")
@@ -97,6 +94,7 @@ func main() {
 					return
 				}
 				logger.Info("auth %v", string(barrage.Body))
+				var auth Auth
 				if err := json.Unmarshal(barrage.Body, &auth); err != nil {
 					logger.Error("json.Unmarshal error %v,body %v", err, string(barrage.Body))
 					barrage.Channel().Close()
@@ -136,7 +134,6 @@ func main() {
 
 				ch := network.GetSession(auth.Cid)
 				if ch != nil {
-					logger.Info("channel %v,cid %v", ch, auth.Cid)
 					reply.Code = 0
 					reply.Msg = "该用户重新连接,踢出老的登录设备!"
 					ch.Close()
@@ -167,7 +164,7 @@ func main() {
 				barrage.Channel().SetDeadline(240)
 				barrage.Channel().GetIOService().Serve(barrage)
 			case 4:
-				network.BroadcastRoom(barrage.Channel().GetAttr("rid"), barrage.Channel().GetAttr("cid"), barrage.Body, true)
+				network.BroadcastRoom(barrage, true)
 			}
 		})
 
@@ -273,7 +270,13 @@ func PushRoom(w http.ResponseWriter, r *http.Request) {
 		res["ret"] = 65535
 		return
 	}
-	network.BroadcastRoom(param.Get("rid"), "", bodyBytes, false)
+	barrage := &protocol.Barrage{}
+	barrage.Op = 5
+	barrage.Ver = 1
+	barrage.Body = bodyBytes
+	c := network.NewChannel()
+	c.SetAttr("rid", param.Get("rid"))
+	network.BroadcastRoom(barrage, false)
 	return
 }
 

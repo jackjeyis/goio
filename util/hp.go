@@ -38,7 +38,7 @@ func Post(url, ctype string, body []byte) (Res, error) {
 	}
 	defer resp.Body.Close()
 	body, err = ioutil.ReadAll(resp.Body)
-	//logger.Info("url %s Resp  body %s", url, string(body))
+	logger.Info("url %s Resp  body %s", url, string(body))
 	if err != nil {
 		logger.Error("hp.Post ioutil.ReadAll error %v", err)
 		return res, err
