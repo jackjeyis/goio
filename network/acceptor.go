@@ -84,24 +84,17 @@ func acceptTCP(a *Acceptor) {
 			}
 			return
 		}
-
-		logger.Info("acceptor new conn %v", conn)
 		//conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 		sch := a.allocChannel()
-		logger.Info("allocChannel %v", sch)
 		InitChannel(sch, a, conn)
-		logger.Info("InitChannel")
 		sch.Start()
-		logger.Info("sch.Start")
 	}
 }
 
-func (a *Acceptor) HandleConn(c net.Conn) {
-	logger.Info("handle conn %v", c)
-}
 func (a *Acceptor) Stop() {
 	a.ln.Close()
 	close(a.quit)
+	Close()
 }
 
 func (a *Acceptor) allocChannel() *ServiceChannel {

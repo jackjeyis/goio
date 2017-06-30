@@ -5,6 +5,7 @@ import (
 	"goio/msg"
 	"goio/protocol"
 	"goio/util"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -14,19 +15,58 @@ var (
 
 func init() {
 	once.Do(func() {
+		//b := NewBucket(256)
 		s = &Session{
 			ctrie: util.New(nil),
 			room:  util.New(nil),
+			size:  128,
+			queue: make([]chan *protocol.Barrage, 128),
+		}
+		for i := uint64(0); i < s.size; i++ {
+			s.queue[i] = make(chan *protocol.Barrage, s.size/2)
+			go process(s.queue[i])
 		}
 	})
 }
 
+func process(q chan *protocol.Barrage) {
+	var b *protocol.Barrage
+	for {
+		b = <-q
+		if b != nil {
+			PushRoom(*b)
+		}
+	}
+}
+
 type Bucket struct {
 	buckets []*Session
+	size    int
 }
+
+func NewBucket(size int) *Bucket {
+	b := &Bucket{
+		buckets: make([]*Session, size),
+		size:    size,
+	}
+
+	for i := 0; i < size; i++ {
+		b.buckets[i] = &Session{ctrie: util.New(nil), room: util.New(nil)}
+	}
+
+	return b
+}
+
+func (b *Bucket) HashSession(key string) *Session {
+	idx := 0 /*cityhash.CityHash32([]byte(key), uint32(len(key))) % b.size*/
+	return b.buckets[idx]
+}
+
 type Session struct {
 	ctrie *util.Ctrie
 	room  *util.Ctrie
+	queue []chan *protocol.Barrage
+	size  uint64
 }
 
 type Room struct {
@@ -185,7 +225,7 @@ func NotifyHost(rid, cid, uid string, code int8) {
 			Push(barrage)
 		}
 	} else {
-		PushRoom(barrage)
+		BroadcastRoom(barrage, false)
 	}
 }
 
@@ -218,5 +258,12 @@ func BroadcastRoom(barrage protocol.Barrage, store bool) {
 			logger.Error("util.StoreMessage error %v", err)
 		}
 	}*/
-	PushRoom(barrage)
+	idx := atomic.AddUint64(&s.size, 1) % s.size
+	s.queue[idx] <- &barrage
+}
+
+func Close() {
+	for i := uint64(0); i < s.size; i++ {
+		close(s.queue[i])
+	}
 }
