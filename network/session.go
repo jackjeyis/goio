@@ -171,9 +171,7 @@ func NotifyHost(rid, cid, uid string, code int8) {
 	if err != nil {
 		logger.Error("util.StoreMessage error %v", err)
 	}
-	barrage := &protocol.Barrage{}
-	barrage.Ver = 1
-	barrage.Op = 5
+	barrage := protocol.Barrage{}
 	barrage.Body = body
 	ch := NewChannel()
 	ch.SetAttr("rid", rid)
@@ -191,7 +189,7 @@ func NotifyHost(rid, cid, uid string, code int8) {
 	}
 }
 
-func PushRoom(barrage *protocol.Barrage) {
+func PushRoom(barrage protocol.Barrage) {
 	chans := GetRoomSession(barrage.Channel().GetAttr("rid"))
 	if chans == nil {
 		return
@@ -200,17 +198,19 @@ func PushRoom(barrage *protocol.Barrage) {
 		if c == nil || c.GetAttr("cid") == barrage.Channel().GetAttr("cid") {
 			continue
 		}
+		barrage.Ver = 1
+		barrage.Op = 5
 		barrage.SetChannel(c)
 		barrage.SetHandlerId(int(uintptr(unsafe.Pointer(c.(*ServiceChannel)))))
 		Push(barrage)
 	}
 }
 
-func Push(barrage *protocol.Barrage) {
-	barrage.Channel().GetIOService().Serve(barrage)
+func Push(barrage protocol.Barrage) {
+	barrage.Channel().EncodeMessage(&barrage)
 }
 
-func BroadcastRoom(barrage *protocol.Barrage, store bool) {
+func BroadcastRoom(barrage protocol.Barrage, store bool) {
 	/*if store {
 		err := util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+barrage.Channel().GetAttr("rid")+"/chat", barrage.Body)
 

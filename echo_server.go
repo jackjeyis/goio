@@ -86,14 +86,13 @@ func main() {
 				return
 			}
 
-			logger.Info("handlerId %v", barrage.HandlerId())
 			if barrage.Channel().GetAttr("status") != "OK" {
 				if barrage.Op != 7 {
 					logger.Info("handshake fail!")
 					barrage.Channel().Close()
 					return
 				}
-				logger.Info("auth %v", string(barrage.Body))
+				//logger.Info("auth %v", string(barrage.Body))
 				var auth Auth
 				if err := json.Unmarshal(barrage.Body, &auth); err != nil {
 					logger.Error("json.Unmarshal error %v,body %v", err, string(barrage.Body))
@@ -113,7 +112,8 @@ func main() {
 					barrage.Channel().Close()
 					return
 				}
-				logger.Info("res %v", res)
+				//logger.Info("res %v", res)
+
 				var reply AuthReply
 
 				switch res.Code {
@@ -143,7 +143,7 @@ func main() {
 				body, _ := util.EncodeJson(reply)
 				barrage.Body = body
 				if reply.Code != 0 {
-					barrage.Channel().GetIOService().Serve(barrage)
+					barrage.Channel().EncodeMessage(barrage)
 					time.Sleep(1 * time.Second)
 					barrage.Channel().Close()
 					return
@@ -153,18 +153,17 @@ func main() {
 				barrage.Channel().SetAttr("uid", res.Data.UserId)
 				barrage.Channel().SetAttr("rid", auth.Rid)
 				barrage.Channel().SetAttr("ct", util.GetClientType(auth.Cid))
-				logger.Info("Register %v", auth.Cid)
 				network.Register(auth.Cid, barrage.Channel(), res.Data.Role)
-				barrage.Channel().GetIOService().Serve(barrage)
+				barrage.Channel().EncodeMessage(barrage)
 				network.NotifyHost(auth.Rid, auth.Cid, res.Data.UserId, 1)
 			}
 			switch barrage.Op {
 			case 2:
 				barrage.Op = 3
 				barrage.Channel().SetDeadline(240)
-				barrage.Channel().GetIOService().Serve(barrage)
+				barrage.Channel().EncodeMessage(barrage)
 			case 4:
-				network.BroadcastRoom(barrage, true)
+				network.BroadcastRoom(*barrage, true)
 			}
 		})
 
@@ -234,6 +233,7 @@ func main() {
 				}
 			}(ev)
 		}()
+
 		return nil
 	}).Run()
 
@@ -270,7 +270,7 @@ func PushRoom(w http.ResponseWriter, r *http.Request) {
 		res["ret"] = 65535
 		return
 	}
-	barrage := &protocol.Barrage{}
+	barrage := protocol.Barrage{}
 	barrage.Op = 5
 	barrage.Ver = 1
 	barrage.Body = bodyBytes
