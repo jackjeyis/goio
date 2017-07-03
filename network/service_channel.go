@@ -204,6 +204,7 @@ func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
 		s.conn.Close()
 		return
 	}
+	s.OnWrite()
 	/*select {
 	case <-s.acceptor.quit:
 		return

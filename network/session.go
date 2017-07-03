@@ -102,6 +102,21 @@ func (r *Room) getMember() (chans []msg.Channel, uids []string, rcount int) {
 	return
 }
 
+func (r *Room) pushMsg(barrage protocol.Barrage) {
+	for entry := range r.chs.Iterator(nil) {
+		for item := range entry.Value.(*util.Ctrie).Iterator(nil) {
+			c := item.Value.(msg.Channel)
+			if c == nil || c.GetAttr("cid") == barrage.Channel().GetAttr("cid") {
+				continue
+			}
+			barrage.Ver = 1
+			barrage.Op = 5
+			barrage.SetChannel(c)
+			c.EncodeMessage(&barrage)
+		}
+	}
+}
+
 func (r *Room) deleteChan(cid, uid string) {
 	c, _ := r.chs.Lookup([]byte(uid))
 	if c != nil {
@@ -220,8 +235,7 @@ func NotifyHost(rid, cid, uid string, code int8) {
 		for item := range r.host.Iterator(nil) {
 			ch := item.Value.(msg.Channel)
 			barrage.SetChannel(ch)
-			//barrage.SetHandlerId(int(uintptr(unsafe.Pointer(ch.(*ServiceChannel)))))
-			Push(barrage)
+			barrage.Channel().EncodeMessage(&barrage)
 		}
 	} else {
 		BroadcastRoom(barrage, false)
@@ -229,20 +243,11 @@ func NotifyHost(rid, cid, uid string, code int8) {
 }
 
 func PushRoom(barrage protocol.Barrage) {
-	chans := GetRoomSession(barrage.Channel().GetAttr("rid"))
-	if chans == nil {
+	r := s.roomer(barrage.Channel().GetAttr("rid"))
+	if r == nil {
 		return
 	}
-	for _, c := range chans {
-		if c == nil || c.GetAttr("cid") == barrage.Channel().GetAttr("cid") {
-			continue
-		}
-		barrage.Ver = 1
-		barrage.Op = 5
-		barrage.SetChannel(c)
-		//barrage.SetHandlerId(int(uintptr(unsafe.Pointer(c.(*ServiceChannel)))))
-		Push(barrage)
-	}
+	r.pushMsg(barrage)
 }
 
 func Push(barrage protocol.Barrage) {
