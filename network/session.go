@@ -5,8 +5,8 @@ import (
 	"goio/msg"
 	"goio/protocol"
 	"goio/util"
+	"sync"
 	"sync/atomic"
-	"unsafe"
 )
 
 var (
@@ -19,8 +19,7 @@ func init() {
 		s = &Session{
 			ctrie: util.New(nil),
 			room:  util.New(nil),
-			size:  128,
-			queue: make([]chan *protocol.Barrage, 128),
+			size:  1024,
 		}
 		for i := uint64(0); i < s.size; i++ {
 			s.queue[i] = make(chan *protocol.Barrage, s.size/2)
@@ -65,7 +64,7 @@ func (b *Bucket) HashSession(key string) *Session {
 type Session struct {
 	ctrie *util.Ctrie
 	room  *util.Ctrie
-	queue []chan *protocol.Barrage
+	queue [1024]chan *protocol.Barrage
 	size  uint64
 }
 
@@ -206,7 +205,7 @@ func NotifyHost(rid, cid, uid string, code int8) {
 	notify.Code = code
 	notify.Time = util.GetMillis()
 	body, err := util.EncodeJson(notify)
-	//err = util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+rid+"/view_record", body)
+	err = util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+rid+"/view_record", body)
 
 	if err != nil {
 		logger.Error("util.StoreMessage error %v", err)
@@ -221,7 +220,7 @@ func NotifyHost(rid, cid, uid string, code int8) {
 		for item := range r.host.Iterator(nil) {
 			ch := item.Value.(msg.Channel)
 			barrage.SetChannel(ch)
-			barrage.SetHandlerId(int(uintptr(unsafe.Pointer(ch.(*ServiceChannel)))))
+			//barrage.SetHandlerId(int(uintptr(unsafe.Pointer(ch.(*ServiceChannel)))))
 			Push(barrage)
 		}
 	} else {
@@ -241,25 +240,29 @@ func PushRoom(barrage protocol.Barrage) {
 		barrage.Ver = 1
 		barrage.Op = 5
 		barrage.SetChannel(c)
-		barrage.SetHandlerId(int(uintptr(unsafe.Pointer(c.(*ServiceChannel)))))
+		//barrage.SetHandlerId(int(uintptr(unsafe.Pointer(c.(*ServiceChannel)))))
 		Push(barrage)
 	}
 }
 
 func Push(barrage protocol.Barrage) {
-	barrage.Channel().EncodeMessage(&barrage)
+	barrage.Channel().GetIOService().Serve(&barrage)
 }
 
+var m sync.Mutex
+
 func BroadcastRoom(barrage protocol.Barrage, store bool) {
-	/*if store {
+	if store {
 		err := util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+barrage.Channel().GetAttr("rid")+"/chat", barrage.Body)
 
 		if err != nil {
 			logger.Error("util.StoreMessage error %v", err)
 		}
-	}*/
+	}
+	m.Lock()
 	idx := atomic.AddUint64(&s.size, 1) % s.size
 	s.queue[idx] <- &barrage
+	m.Unlock()
 }
 
 func Close() {

@@ -88,6 +88,7 @@ func acceptTCP(a *Acceptor) {
 		sch := a.allocChannel()
 		InitChannel(sch, a, conn)
 		sch.Start()
+		logger.Info("accept new conn %v", conn)
 	}
 }
 
@@ -98,12 +99,13 @@ func (a *Acceptor) Stop() {
 }
 
 func (a *Acceptor) allocChannel() *ServiceChannel {
-	/*ch := a.freeChannel
+	ch := a.freeChannel
 	if ch == nil {
 		ch = new(ServiceChannel)
 	} else {
 		a.freeChannel = ch.next
 		*ch = ServiceChannel{}
-	}*/
-	return &ServiceChannel{}
+	}
+	return ch
+	//return &ServiceChannel{}
 }

@@ -23,7 +23,7 @@ type ServiceChannel struct {
 	attrs    map[string]string
 	acceptor *Acceptor
 	next     *ServiceChannel
-	queue    chan msg.Message
+	//queue    chan msg.Message
 }
 
 func InitChannel(sch *ServiceChannel, a *Acceptor, c *net.TCPConn) {
@@ -32,7 +32,7 @@ func InitChannel(sch *ServiceChannel, a *Acceptor, c *net.TCPConn) {
 	sch.conn = c
 	sch.acceptor = a
 	sch.attrs = make(map[string]string)
-	sch.queue = make(chan msg.Message, 10000)
+	//sch.queue = make(chan msg.Message, 10000)
 }
 
 func NewChannel() *ServiceChannel {
@@ -54,7 +54,7 @@ func (s *ServiceChannel) GetAttr(key string) string {
 
 func (s *ServiceChannel) Start() {
 	go s.OnRead()
-	go s.OnWrite()
+	//go s.OnWrite()
 }
 
 func (s *ServiceChannel) OnRead() {
@@ -88,7 +88,7 @@ L:
 
 		n, err = s.conn.Read(s.in.Buffer()[wt:])
 
-		logger.Info("n %v", n)
+		//logger.Info("n %v", n)
 		if err != nil {
 			if err == io.EOF {
 				logger.Warn("ServiceChannel.OnRead Closed by peer %v", err)
@@ -145,7 +145,7 @@ func (s *ServiceChannel) OnWrite() {
 
 		}
 	}*/
-	for {
+	/*for {
 		select {
 		case <-s.acceptor.quit:
 			close(s.queue)
@@ -168,14 +168,15 @@ func (s *ServiceChannel) OnWrite() {
 			s.out.Consume(uint64(n))
 		}
 	}
-	/*for s.out.GetReadSize() > 0 {
+	*/
+	for s.out.GetReadSize() > 0 {
 		n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
 		if n < 0 || err != nil {
 			//s.conn.CloseWrite()
 			return
 		}
 		s.out.Consume(uint64(n))
-	}*/
+	}
 }
 
 func (s *ServiceChannel) DecodeMessage() error {
@@ -190,24 +191,24 @@ func (s *ServiceChannel) DecodeMessage() error {
 		}
 		m.SetChannel(s)
 		//m.SetHandlerId(int(uintptr(unsafe.Pointer(s))))
-		//s.acceptor.io_service.GetServiceStage().Send(m)
-		go s.acceptor.service.Serve(m)
+		s.acceptor.io_service.GetServiceStage().Send(m)
+		//go s.acceptor.service.Serve(m)
 		s.in.SetInit(true)
 	}
 	return nil
 }
 
 func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
-	/*if err := s.acceptor.proto.Encode(msg, s.out); err != nil {
+	if err := s.acceptor.proto.Encode(msg, s.out); err != nil {
 		logger.Error("s.protocol.Encode error %v", err)
 		s.conn.Close()
 		return
-	}*/
-	select {
+	}
+	/*select {
 	case <-s.acceptor.quit:
 		return
 	case s.queue <- msg:
-	}
+	}*/
 }
 
 func (s *ServiceChannel) Serve(msg msg.Message) {

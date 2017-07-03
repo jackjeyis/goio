@@ -50,9 +50,9 @@ func (ih *IOHandler) GetHandlerId() int {
 var m sync.Mutex
 
 func (ih *IOHandler) Handle(msg msg.Message) {
-	//m.Lock()
+	m.Lock()
 	//	logger.Info("msg id %v,go id %v", msg.HandlerId(), util.Goid())
 	msg.Channel().EncodeMessage(msg)
-	//msg.Channel().OnWrite()
-	//m.Unlock()
+	msg.Channel().OnWrite()
+	m.Unlock()
 }

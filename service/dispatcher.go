@@ -106,12 +106,12 @@ func (d *Dispatcher) Dispatch() {
 		select {
 		case m := <-d.queue:
 			if m != nil {
-				go func(msg msg.Message) {
-					jobChannel := <-d.workerPool
-					if jobChannel != nil {
-						jobChannel <- msg
-					}
-				}(m)
+				//go func(msg msg.Message) {
+				jobChannel := <-d.workerPool
+				if jobChannel != nil {
+					jobChannel <- m
+				}
+				//}(m)
 			}
 		case <-d.stop:
 			return
