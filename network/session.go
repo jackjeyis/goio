@@ -7,6 +7,7 @@ import (
 	"goio/util"
 	"sync"
 	"sync/atomic"
+	//"time"
 )
 
 var (
@@ -118,11 +119,12 @@ func (r *Room) pushMsg(barrage protocol.Barrage) {
 			if c == nil || c.GetAttr("cid") == barrage.Channel().GetAttr("cid") {
 				return true
 			}
-
-			barrage.Ver = 1
-			barrage.Op = 5
-			barrage.SetChannel(c)
-			c.EncodeMessage(&barrage)
+			b := &protocol.Barrage{}
+			b.Ver = 1
+			b.Op = 5
+			b.Body = barrage.Body
+			b.SetChannel(c)
+			c.EncodeMessage(b)
 			return true
 		})
 		return true
@@ -249,7 +251,7 @@ func NotifyHost(rid, cid, uid string, code int8) {
 	if err != nil {
 		logger.Error("util.StoreMessage error %v", err)
 	}
-	barrage := protocol.Barrage{}
+	barrage := &protocol.Barrage{}
 	barrage.Body = body
 	ch := NewChannel()
 	ch.SetAttr("rid", rid)
@@ -258,12 +260,16 @@ func NotifyHost(rid, cid, uid string, code int8) {
 	if code == 0 {
 		r.host.Range(func(key, value interface{}) bool {
 			ch := value.(msg.Channel)
-			barrage.SetChannel(ch)
-			ch.EncodeMessage(&barrage)
+			b := &protocol.Barrage{}
+			b.SetChannel(ch)
+			b.Op = 5
+			b.Ver = 1
+			b.Body = body
+			ch.EncodeMessage(b)
 			return true
 		})
 	} else {
-		BroadcastRoom(barrage, false)
+		BroadcastRoom(*barrage, false)
 	}
 }
 
@@ -292,6 +298,7 @@ func BroadcastRoom(barrage protocol.Barrage, store bool) {
 	m.Lock()
 	idx := atomic.AddUint64(&s.size, 1) % s.size
 	s.queue[idx] <- &barrage
+	//PushRoom(barrage)
 	m.Unlock()
 }
 

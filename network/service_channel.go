@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"time"
+	"sync"
 
 	"goio/logger"
 	"goio/msg"
@@ -23,7 +24,6 @@ type ServiceChannel struct {
 	attrs    map[string]string
 	acceptor *Acceptor
 	next     *ServiceChannel
-	//queue    chan msg.Message
 }
 
 func InitChannel(sch *ServiceChannel, a *Acceptor, c *net.TCPConn) {
@@ -32,7 +32,6 @@ func InitChannel(sch *ServiceChannel, a *Acceptor, c *net.TCPConn) {
 	sch.conn = c
 	sch.acceptor = a
 	sch.attrs = make(map[string]string)
-	//sch.queue = make(chan msg.Message, 10000)
 }
 
 func NewChannel() *ServiceChannel {
@@ -54,7 +53,6 @@ func (s *ServiceChannel) GetAttr(key string) string {
 
 func (s *ServiceChannel) Start() {
 	go s.OnRead()
-	//go s.OnWrite()
 }
 
 func (s *ServiceChannel) OnRead() {
@@ -111,65 +109,12 @@ L:
 }
 
 func (s *ServiceChannel) OnWrite() {
-	/*var (
-		n int
-	)
-	defer func() {
-		s.out.Reset()
-	}()
-	*/
-	/*for {
-		select {
-		case <-s.quit:
-			s.conn.Close()
-			return
-		case <-s.close:
-			if s.out.GetReadSize() > 0 {
-				continue
-			} else {
-				s.conn.CloseWrite()
-				return
-			}
-
-		default:
-			if s.out.GetReadSize() > 0 {
-				n, err = s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
-				if n < 0 || err != nil {
-					s.conn.CloseWrite()
-					return
-				}
-				s.out.Consume(uint64(n))
-			}
-
-			logger.Info("wt %v,rt %v,cap %v,size %v", s.out.GetWrite(), s.out.GetRead(), s.out.Len(), s.out.GetReadSize())
-
-		}
-	}*/
-	/*for {
-		select {
-		case <-s.acceptor.quit:
-			close(s.queue)
-			return
-		default:
-			m := <-s.queue
-			if m == nil {
-				continue
-			}
-			if err := s.acceptor.proto.Encode(m, s.out); err != nil {
-				logger.Error("s.protocol.Encode error %v", err)
-				s.conn.Close()
-				return
-			}
-			n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
-			if n < 0 || err != nil {
-				//s.conn.Close()
-				return
-			}
-			s.out.Consume(uint64(n))
-		}
-	}
-	*/
 	for s.out.GetReadSize() > 0 {
+		logger.Info("read %v write %v,size %v",s.out.GetRead(),s.out.GetWrite(),s.out.GetReadSize())
+		if s.out.GetRead() > s.out.GetWrite() {
+			return
+		}
+
 		n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
 		if n < 0 || err != nil {
 			//s.conn.CloseWrite()
@@ -190,26 +135,22 @@ func (s *ServiceChannel) DecodeMessage() error {
 			return e
 		}
 		m.SetChannel(s)
-		//m.SetHandlerId(int(uintptr(unsafe.Pointer(s))))
 		s.acceptor.io_service.GetServiceStage().Send(m)
-		//go s.acceptor.service.Serve(m)
 		s.in.SetInit(true)
 	}
 	return nil
 }
 
+var mu sync.Mutex
 func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
+	//defer mu.Unlock()
+	//mu.Lock()
 	if err := s.acceptor.proto.Encode(msg, s.out); err != nil {
 		logger.Error("s.protocol.Encode error %v", err)
 		s.conn.Close()
 		return
 	}
 	s.OnWrite()
-	/*select {
-	case <-s.acceptor.quit:
-		return
-	case s.queue <- msg:
-	}*/
 }
 
 func (s *ServiceChannel) Serve(msg msg.Message) {

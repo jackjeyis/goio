@@ -155,7 +155,7 @@ func main() {
 				barrage.Channel().SetAttr("ct", util.GetClientType(auth.Cid))
 				network.Register(auth.Cid, barrage.Channel(), res.Data.Role)
 				barrage.Channel().EncodeMessage(barrage)
-				network.NotifyHost(auth.Rid, auth.Cid, res.Data.UserId, 1)
+				go network.NotifyHost(auth.Rid, auth.Cid, res.Data.UserId, 1)
 			}
 			switch barrage.Op {
 			case 2:
@@ -163,7 +163,7 @@ func main() {
 				barrage.Channel().SetDeadline(240)
 				barrage.Channel().EncodeMessage(barrage)
 			case 4:
-				network.BroadcastRoom(*barrage, true)
+				go network.BroadcastRoom(*barrage, true)
 			}
 		})
 
@@ -270,13 +270,14 @@ func PushRoom(w http.ResponseWriter, r *http.Request) {
 		res["ret"] = 65535
 		return
 	}
-	barrage := protocol.Barrage{}
+	barrage := &protocol.Barrage{}
 	barrage.Op = 5
 	barrage.Ver = 1
 	barrage.Body = bodyBytes
 	c := network.NewChannel()
 	c.SetAttr("rid", param.Get("rid"))
-	network.BroadcastRoom(barrage, false)
+	barrage.SetChannel(c)
+	network.BroadcastRoom(*barrage, false)
 	return
 }
 
@@ -292,7 +293,6 @@ func GetRoom(w http.ResponseWriter, r *http.Request) {
 
 	defer retWrite(w, r, res, time.Now())
 	w.Header().Set("Content-Type", "application/json")
-	//logger.Info("rid %v", param.Get("rid"))
 	count, uids := network.GetRoomStatus(param.Get("rid"))
 	if uids == nil {
 		res["ret"] = 2

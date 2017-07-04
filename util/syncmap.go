@@ -274,10 +274,10 @@ func (m *Map) Delete(key interface{}) {
 		if !ok && read.amended {
 			delete(m.dirty, key)
 		}
-		atomic.AddInt64(&m.size, -1)
 		m.mu.Unlock()
 	}
 	if ok {
+		atomic.AddInt64(&m.size, -1)
 		e.delete()
 	}
 }

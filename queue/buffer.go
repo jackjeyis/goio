@@ -3,6 +3,7 @@ package queue
 import (
 	"errors"
 	"strconv"
+	"sync/atomic"
 )
 
 type IOBuffer struct {
@@ -86,11 +87,11 @@ func (b *IOBuffer) Read(n uint64) []byte {
 }
 
 func (b *IOBuffer) Produce(size uint64) {
-	b.wt += size
+	atomic.AddUint64(&b.wt,size)
 }
 
 func (b *IOBuffer) Consume(size uint64) {
-	b.rt += size
+	atomic.AddUint64(&b.rt,size)
 }
 
 func (b *IOBuffer) GetReadSize() uint64 {
