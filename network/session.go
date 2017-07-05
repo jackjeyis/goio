@@ -12,24 +12,28 @@ import (
 
 var (
 	s *Session
+	q chan msg.Message
+	m sync.Mutex
 )
 
 func init() {
 	once.Do(func() {
 		//b := NewBucket(256)
+		q = make(chan msg.Message ,1024)	
 		s = &Session{
 			ctrie: &util.Map{},
 			room:  &util.Map{},
-			size:  1024,
+			msize:  4096,
 		}
-		for i := uint64(0); i < s.size; i++ {
-			s.queue[i] = make(chan *protocol.Barrage, s.size/2)
-			go process(s.queue[i])
+		for i := uint64(0); i < s.msize; i++ {
+			s.msgq[i] = make(chan *protocol.Barrage, 100)
+			go procMsg(s.msgq[i])
 		}
+		
 	})
 }
 
-func process(q chan *protocol.Barrage) {
+func procMsg(q chan *protocol.Barrage) {
 	var b *protocol.Barrage
 	for {
 		b = <-q
@@ -65,8 +69,9 @@ func (b *Bucket) HashSession(key string) *Session {
 type Session struct {
 	ctrie *util.Map
 	room  *util.Map
-	queue [1024]chan *protocol.Barrage
-	size  uint64
+	msgq [4096]chan *protocol.Barrage
+	msize  uint64
+	nsize uint64
 }
 
 type Room struct {
@@ -80,6 +85,13 @@ func NewRoom(id string) *Room {
 		chs:  &util.Map{},
 		rid:  id,
 		host: &util.Map{},
+	}
+}
+
+func (r *Room) handle() {
+	for {
+		b := <-q
+		b.Channel().EncodeMessage(b)
 	}
 }
 
@@ -111,6 +123,10 @@ func (r *Room) getMember() (uids []string, rcount int) {
 	}
 	return
 }*/
+
+func (r *Room) pushHost(b *protocol.Barrage) {
+	q<- b
+}
 
 func (r *Room) pushMsg(barrage protocol.Barrage) {
 	r.chs.Range(func(key, value interface{}) bool {
@@ -259,17 +275,20 @@ func NotifyHost(rid, cid, uid string, code int8) {
 	barrage.SetChannel(ch)
 	if code == 0 {
 		r.host.Range(func(key, value interface{}) bool {
-			ch := value.(msg.Channel)
+			c := value.(msg.Channel)
+			if c == nil || c.GetAttr("cid") == barrage.Channel().GetAttr("cid") {
+				return true
+			}
 			b := &protocol.Barrage{}
-			b.SetChannel(ch)
+			b.SetChannel(c)
 			b.Op = 5
 			b.Ver = 1
 			b.Body = body
-			ch.EncodeMessage(b)
+			r.pushHost(b)	
 			return true
 		})
 	} else {
-		BroadcastRoom(*barrage, false)
+		BroadcastRoom(*barrage,false)
 	}
 }
 
@@ -285,8 +304,6 @@ func Push(barrage protocol.Barrage) {
 	barrage.Channel().GetIOService().Serve(&barrage)
 }
 
-var m sync.Mutex
-
 func BroadcastRoom(barrage protocol.Barrage, store bool) {
 	if store {
 		err := util.StoreMessage("http://"+util.GetHttpConfig().Remoteaddr+"/im/"+barrage.Channel().GetAttr("rid")+"/chat", barrage.Body)
@@ -296,14 +313,14 @@ func BroadcastRoom(barrage protocol.Barrage, store bool) {
 		}
 	}
 	m.Lock()
-	idx := atomic.AddUint64(&s.size, 1) % s.size
-	s.queue[idx] <- &barrage
-	//PushRoom(barrage)
+	idx := atomic.AddUint64(&s.msize, 1) % s.msize
+	s.msgq[idx] <- &barrage
 	m.Unlock()
 }
 
 func Close() {
-	for i := uint64(0); i < s.size; i++ {
-		close(s.queue[i])
+	for i := uint64(0); i < s.msize; i++ {
+		close(s.msgq[i])
 	}
+	close(q)
 }

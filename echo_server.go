@@ -112,7 +112,7 @@ func main() {
 					barrage.Channel().Close()
 					return
 				}
-				//logger.Info("res %v", res)
+				logger.Info("res %v", res)
 
 				var reply AuthReply
 

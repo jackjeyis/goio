@@ -86,7 +86,6 @@ L:
 
 		n, err = s.conn.Read(s.in.Buffer()[wt:])
 
-		//logger.Info("n %v", n)
 		if err != nil {
 			if err == io.EOF {
 				logger.Warn("ServiceChannel.OnRead Closed by peer %v", err)
@@ -110,7 +109,6 @@ L:
 
 func (s *ServiceChannel) OnWrite() {
 	for s.out.GetReadSize() > 0 {
-		logger.Info("read %v write %v,size %v",s.out.GetRead(),s.out.GetWrite(),s.out.GetReadSize())
 		if s.out.GetRead() > s.out.GetWrite() {
 			return
 		}
