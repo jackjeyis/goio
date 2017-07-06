@@ -136,6 +136,7 @@ func main() {
 				if ch != nil {
 					reply.Code = 0
 					reply.Msg = "该用户重新连接,踢出老的登录设备!"
+					ch.SetAttr("status", "")
 					ch.Close()
 					network.UnRegister(auth.Cid, res.Data.UserId, auth.Rid)
 				}

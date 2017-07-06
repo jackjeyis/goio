@@ -3,8 +3,8 @@ package network
 import (
 	"io"
 	"net"
-	"time"
 	"sync"
+	"time"
 
 	"goio/logger"
 	"goio/msg"
@@ -63,6 +63,7 @@ func (s *ServiceChannel) OnRead() {
 	)
 	defer func() {
 		if s.GetAttr("status") == "OK" {
+			logger.Info("%v leave room %v", s.GetAttr("cid"), s.GetAttr("rid"))
 			UnRegister(s.GetAttr("cid"), s.GetAttr("uid"), s.GetAttr("rid"))
 			NotifyHost(s.GetAttr("rid"), s.GetAttr("cid"), s.GetAttr("uid"), 0)
 		}
@@ -140,6 +141,7 @@ func (s *ServiceChannel) DecodeMessage() error {
 }
 
 var mu sync.Mutex
+
 func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
 	//defer mu.Unlock()
 	//mu.Lock()
