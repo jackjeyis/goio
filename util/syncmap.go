@@ -131,6 +131,7 @@ func (e *entry) load() (value interface{}, ok bool) {
 func (m *Map) Store(key, value interface{}) {
 	read, _ := m.read.Load().(readOnly)
 	if e, ok := read.m[key]; ok && e.tryStore(&value) {
+		atomic.AddInt64(&m.size, 1)
 		return
 	}
 
@@ -284,6 +285,13 @@ func (m *Map) Delete(key interface{}) {
 
 func (m *Map) Size() int64 {
 	return m.size
+	/*var i int64
+	m.Range(func(key, value interface{}) bool {
+		i += 1
+		return true
+	})
+	return i
+	*/
 }
 
 func (e *entry) delete() (hadValue bool) {

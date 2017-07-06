@@ -19,17 +19,17 @@ var (
 func init() {
 	once.Do(func() {
 		//b := NewBucket(256)
-		q = make(chan msg.Message ,1024)	
+		q = make(chan msg.Message, 1024)
 		s = &Session{
 			ctrie: &util.Map{},
 			room:  &util.Map{},
-			msize:  4096,
+			msize: 4096,
 		}
 		for i := uint64(0); i < s.msize; i++ {
 			s.msgq[i] = make(chan *protocol.Barrage, 100)
 			go procMsg(s.msgq[i])
 		}
-		
+
 	})
 }
 
@@ -69,8 +69,8 @@ func (b *Bucket) HashSession(key string) *Session {
 type Session struct {
 	ctrie *util.Map
 	room  *util.Map
-	msgq [4096]chan *protocol.Barrage
-	msize  uint64
+	msgq  [4096]chan *protocol.Barrage
+	msize uint64
 	nsize uint64
 }
 
@@ -95,15 +95,6 @@ func (r *Room) handle() {
 	}
 }
 
-func (r *Room) addChan(cid, uid string, ch msg.Channel) {
-	c, _ := r.chs.Load(uid)
-	if c == nil {
-		c = &util.Map{}
-		r.chs.Store(uid, c)
-	}
-	c.(*util.Map).Store(cid, ch)
-}
-
 func (r *Room) getMember() (uids []string, rcount int) {
 	r.chs.Range(func(key, value interface{}) bool {
 		uids = append(uids, key.(string))
@@ -113,19 +104,8 @@ func (r *Room) getMember() (uids []string, rcount int) {
 	return
 }
 
-/*func (r *Room) getMember() (chans []msg.Channel, uids []string, rcount int) {
-	for entry := range r.chs.Iterator(nil) {
-		for item := range entry.Value.(*util.Ctrie).Iterator(nil) {
-			chans = append(chans, item.Value.(msg.Channel))
-		}
-		uids = append(uids, string(entry.Key))
-		rcount += 1
-	}
-	return
-}*/
-
 func (r *Room) pushHost(b *protocol.Barrage) {
-	q<- b
+	q <- b
 }
 
 func (r *Room) pushMsg(barrage protocol.Barrage) {
@@ -147,20 +127,14 @@ func (r *Room) pushMsg(barrage protocol.Barrage) {
 	})
 }
 
-/*func (r *Room) pushMsg(barrage protocol.Barrage) {
-	for entry := range r.chs.Iterator(nil) {
-		for item := range entry.Value.(*util.Ctrie).Iterator(nil) {
-			c := item.Value.(msg.Channel)
-			if c == nil || c.GetAttr("cid") == barrage.Channel().GetAttr("cid") {
-				continue
-			}
-			barrage.Ver = 1
-			barrage.Op = 5
-			barrage.SetChannel(c)
-			c.EncodeMessage(&barrage)
-		}
+func (r *Room) addChan(cid, uid string, ch msg.Channel) {
+	c, _ := r.chs.Load(uid)
+	if c == nil {
+		c = &util.Map{}
+		r.chs.Store(uid, c)
 	}
-}*/
+	c.(*util.Map).Store(cid, ch)
+}
 
 func (r *Room) deleteChan(cid, uid string) {
 	c, _ := r.chs.Load(uid)
@@ -169,6 +143,9 @@ func (r *Room) deleteChan(cid, uid string) {
 		ch.Delete(cid)
 		if ch.Size() == 0 {
 			r.chs.Delete(uid)
+			if r.chs.Size() == 0 {
+				s.room.Delete(r.rid)
+			}
 		}
 	}
 }
@@ -180,6 +157,7 @@ func (s *Session) insert(cid string, ch msg.Channel, host int) {
 	r, _ := s.room.Load(rid)
 	if r == nil {
 		room = NewRoom(rid)
+		go room.handle()
 		s.room.Store(rid, room)
 	} else {
 		room = r.(*Room)
@@ -194,12 +172,8 @@ func (s *Session) delete(cid, uid, rid string) {
 	s.ctrie.Delete(cid)
 	r := s.roomer(rid)
 	if r != nil {
-		if r.chs.Size() == 0 {
-			s.room.Delete(rid)
-		} else {
-			r.deleteChan(cid, uid)
-			r.host.Delete(cid)
-		}
+		r.deleteChan(cid, uid)
+		r.host.Delete(cid)
 	}
 }
 
@@ -230,15 +204,6 @@ func UnRegister(cid, uid, rid string) {
 func GetSession(cid string) msg.Channel {
 	return s.find(cid)
 }
-
-/*func GetRoomSession(rid string) []msg.Channel {
-	r := s.roomer(rid)
-	if r == nil {
-		return nil
-	}
-	chans, _, _ := r.getMember()
-	return chans
-}*/
 
 func GetRoomStatus(rid string) (int, []string) {
 	r := s.roomer(rid)
@@ -284,11 +249,11 @@ func NotifyHost(rid, cid, uid string, code int8) {
 			b.Op = 5
 			b.Ver = 1
 			b.Body = body
-			r.pushHost(b)	
+			r.pushHost(b)
 			return true
 		})
 	} else {
-		BroadcastRoom(*barrage,false)
+		BroadcastRoom(*barrage, false)
 	}
 }
 
