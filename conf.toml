@@ -7,9 +7,9 @@
   addr="0.0.0.0:8080 barrage"
 
 [engine]
-srvworker=10000
+srvworker=100000
 srvqueue=100000
-ioworker=10000
+ioworker=100000
 ioqueue=100000
 matrixbucket=16
 matrixsize=1024
@@ -17,7 +17,7 @@ matrixsize=1024
 
 [http]
 localaddr="0.0.0.0:7172"
-remoteaddr="172.16.6.135:8998"
+remoteaddr="172.16.6.10:8998"
 
 [zk]
 addrs = ["172.16.6.74"]

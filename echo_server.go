@@ -47,6 +47,7 @@ func main() {
 	})
 	*/
 
+
 	app = &application.GenericApplication{}
 	app.SetOnStart(func() error {
 		app.RegisterService("mqtt_handler", func(msg msg.Message) {
@@ -136,7 +137,7 @@ func main() {
 				if ch != nil {
 					reply.Code = 0
 					reply.Msg = "该用户重新连接,踢出老的登录设备!"
-					ch.SetAttr("status", "")
+					ch.SetAttr("status","")
 					ch.Close()
 					network.UnRegister(auth.Cid, res.Data.UserId, auth.Rid)
 				}

@@ -88,10 +88,13 @@ func NewRoom(id string) *Room {
 	}
 }
 
+var l sync.Mutex
 func (r *Room) handle() {
 	for {
 		b := <-q
+		l.Lock()
 		b.Channel().EncodeMessage(b)
+		l.Unlock()
 	}
 }
 
@@ -120,7 +123,7 @@ func (r *Room) pushMsg(barrage protocol.Barrage) {
 			b.Op = 5
 			b.Body = barrage.Body
 			b.SetChannel(c)
-			c.EncodeMessage(b)
+			go c.EncodeMessage(b)
 			return true
 		})
 		return true
