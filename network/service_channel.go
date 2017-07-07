@@ -116,7 +116,7 @@ func (s *ServiceChannel) OnWrite() {
 		case <-s.acceptor.quit:
 			close(s.queue)
 			return
-		default:
+		case m := <-s.queue:
 			if s.out.GetRead() > s.out.GetWrite() {
 				return
 			}
@@ -133,6 +133,7 @@ func (s *ServiceChannel) OnWrite() {
 				return
 			}
 			s.out.Consume(uint64(n))
+		default:
 		}
 	}
 }
