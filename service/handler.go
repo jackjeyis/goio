@@ -1,9 +1,6 @@
 package service
 
-import (
-	"goio/msg"
-	"sync"
-)
+import "goio/msg"
 
 type Handler interface {
 	Handle(msg.Message)
@@ -47,12 +44,6 @@ func (ih *IOHandler) GetHandlerId() int {
 	return ih.handler_id
 }
 
-var m sync.Mutex
-
 func (ih *IOHandler) Handle(msg msg.Message) {
-	//m.Lock()
-	//	logger.Info("msg id %v,go id %v", msg.HandlerId(), util.Goid())
 	msg.Channel().EncodeMessage(msg)
-	//msg.Channel().OnWrite()
-	//m.Unlock()
 }

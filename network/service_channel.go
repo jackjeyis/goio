@@ -3,7 +3,6 @@ package network
 import (
 	"io"
 	"net"
-	"sync"
 	"time"
 
 	"goio/logger"
@@ -24,6 +23,7 @@ type ServiceChannel struct {
 	attrs    map[string]string
 	acceptor *Acceptor
 	next     *ServiceChannel
+	queue    chan msg.Message
 }
 
 func InitChannel(sch *ServiceChannel, a *Acceptor, c *net.TCPConn) {
@@ -32,6 +32,7 @@ func InitChannel(sch *ServiceChannel, a *Acceptor, c *net.TCPConn) {
 	sch.conn = c
 	sch.acceptor = a
 	sch.attrs = make(map[string]string)
+	sch.queue = make(chan msg.Message, 128)
 }
 
 func NewChannel() *ServiceChannel {
@@ -53,6 +54,7 @@ func (s *ServiceChannel) GetAttr(key string) string {
 
 func (s *ServiceChannel) Start() {
 	go s.OnRead()
+	go s.OnWrite()
 }
 
 func (s *ServiceChannel) OnRead() {
@@ -63,7 +65,7 @@ func (s *ServiceChannel) OnRead() {
 	)
 	defer func() {
 		if s.GetAttr("status") == "OK" {
-			logger.Info(" %v leave room %v",s.GetAttr("cid"),s.GetAttr("rid"))
+			logger.Info(" %v leave room %v", s.GetAttr("cid"), s.GetAttr("rid"))
 			UnRegister(s.GetAttr("cid"), s.GetAttr("uid"), s.GetAttr("rid"))
 			NotifyHost(s.GetAttr("rid"), s.GetAttr("cid"), s.GetAttr("uid"), 0)
 		}
@@ -109,17 +111,29 @@ L:
 }
 
 func (s *ServiceChannel) OnWrite() {
-	for s.out.GetReadSize() > 0 {
-		if s.out.GetRead() > s.out.GetWrite() {
+	for {
+		select {
+		case <-s.acceptor.quit:
+			close(s.queue)
 			return
-		}
+		default:
+			if s.out.GetRead() > s.out.GetWrite() {
+				return
+			}
 
-		n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
-		if n < 0 || err != nil {
-			//s.conn.CloseWrite()
-			return
+			if err := s.acceptor.proto.Encode(m, s.out); err != nil {
+				logger.Error("s.protocol.Encode error %v", err)
+				s.conn.Close()
+				return
+			}
+
+			n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
+			logger.Info("write n %v bytes", n)
+			if n < 0 || err != nil {
+				return
+			}
+			s.out.Consume(uint64(n))
 		}
-		s.out.Consume(uint64(n))
 	}
 }
 
@@ -140,17 +154,12 @@ func (s *ServiceChannel) DecodeMessage() error {
 	return nil
 }
 
-var mu sync.Mutex
-
 func (s *ServiceChannel) EncodeMessage(msg msg.Message) {
-	//defer mu.Unlock()
-	//mu.Lock()
-	if err := s.acceptor.proto.Encode(msg, s.out); err != nil {
-		logger.Error("s.protocol.Encode error %v", err)
-		s.conn.Close()
+	select {
+	case <-s.acceptor.quit:
 		return
+	case s.queue <- msg:
 	}
-	s.OnWrite()
 }
 
 func (s *ServiceChannel) Serve(msg msg.Message) {
