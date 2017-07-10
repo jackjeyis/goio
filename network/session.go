@@ -13,7 +13,6 @@ import (
 var (
 	s *Session
 	q chan msg.Message
-	m sync.Mutex
 )
 
 func init() {
@@ -89,6 +88,7 @@ func NewRoom(id string) *Room {
 }
 
 var l sync.Mutex
+
 func (r *Room) handle() {
 	for {
 		b := <-q

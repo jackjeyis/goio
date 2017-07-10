@@ -127,8 +127,10 @@ func (s *ServiceChannel) OnWrite() {
 				return
 			}
 
+			if s.out.GetReadSize() <= 4096 {
+				continue
+			}
 			n, err := s.conn.Write(s.out.Buffer()[s.out.GetRead():s.out.GetWrite()])
-			logger.Info("write n %v bytes", n)
 			if n < 0 || err != nil {
 				return
 			}
