@@ -1,16 +1,22 @@
 [services]
-  #[services.1]
+#[services.1]
   #name="mqtt_handler"
   #addr="0.0.0.0:1883 mqtt"
   [services.2]
   name="barrage_handler"
-  addr="0.0.0.0:8080 barrage"
+  addr="0.0.0.0:8081 barrage"
+  [services.3]
+  name="http_handler"
+  addr="0.0.0.0:8080 http"
+  [services.4]
+  name="ping_handler"
+  addr="0.0.0.0:18080 ping"
 
 [engine]
-srvworker=100000
-srvqueue=100000
-ioworker=100000
-ioqueue=100000
+srvworker=1
+srvqueue=1
+ioworker=1
+ioqueue=1
 matrixbucket=16
 matrixsize=1024
 #524288

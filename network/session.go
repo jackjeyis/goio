@@ -89,6 +89,7 @@ func NewRoom(id string) *Room {
 }
 
 var l sync.Mutex
+
 func (r *Room) handle() {
 	for {
 		b := <-q
@@ -287,8 +288,4 @@ func BroadcastRoom(barrage protocol.Barrage, store bool) {
 }
 
 func Close() {
-	for i := uint64(0); i < s.msize; i++ {
-		close(s.msgq[i])
-	}
-	close(q)
 }

@@ -6,6 +6,7 @@ import (
 	"goio/logger"
 	"goio/msg"
 	"goio/network"
+	"goio/proto"
 	"goio/protocol"
 	"goio/util"
 	"io/ioutil"
@@ -13,6 +14,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	pb "github.com/golang/protobuf/proto"
 
 	"github.com/samuel/go-zookeeper/zk"
 	//"github.com/stackimpact/stackimpact-go"
@@ -47,7 +50,6 @@ func main() {
 	})
 	*/
 
-
 	app = &application.GenericApplication{}
 	app.SetOnStart(func() error {
 		app.RegisterService("mqtt_handler", func(msg msg.Message) {
@@ -80,6 +82,15 @@ func main() {
 				app.GetIOService().GetIOStage().Send(m)
 
 			}
+		})
+		app.RegisterService("http_handler", func(msg msg.Message) {
+			logger.Info("http req %v", msg)
+		})
+		app.RegisterService("ping_handler", func(msg msg.Message) {
+			ping := msg.(*protocol.PingPackage)
+			connect := &proto.Connect{}
+			pb.Unmarshal(ping.Body, connect)
+			logger.Info("connect %v", connect)
 		})
 		app.RegisterService("barrage_handler", func(msg msg.Message) {
 			barrage := msg.(*protocol.Barrage)
@@ -137,7 +148,7 @@ func main() {
 				if ch != nil {
 					reply.Code = 0
 					reply.Msg = "该用户重新连接,踢出老的登录设备!"
-					ch.SetAttr("status","")
+					ch.SetAttr("status", "")
 					ch.Close()
 					network.UnRegister(auth.Cid, res.Data.UserId, auth.Rid)
 				}

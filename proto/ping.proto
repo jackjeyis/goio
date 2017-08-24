@@ -1,0 +1,73 @@
+syntax = "proto3";
+message Connect{
+    int32 keepAlive=1;//心跳超时
+    bytes token=2;//用户身份验证
+    bool loginType=3;//登陆类型：主动或者自动
+    bytes clientID=4;//客户端唯一标示
+}
+
+enum ConnAckCode{
+    ACCEPTED = 0;//成功
+    CLIENTED_REJECTED = 1; //客户端ID不合法
+    SERVER_UNAVAILABLE = 2;//服务端拒绝（请求过快或者服务器内部故障等等原因）
+    TOKEN_EXPIRY  = 3;//token失效
+    LOGINED = 4;//已在其他设备登录
+    UPGRADE = 5;//客户端需强制升级
+}
+message Session{
+    int32 id= 1; //会话序号
+    bytes sessionid=2;//会话标识
+    int32 msgSize = 3;//会话未读消息数
+    map<int32,Deliver> delivers =4;//消息字典 ps:deliver结构体见2.6
+}
+message ConnACK{
+    ConnAckCode ackCode=1;//响应码
+    map<int32,Session> sessions =2;//会话字典
+}
+
+
+enum Type{
+    Type_UNDEFINED = 0;
+    SINGLE = 1;
+    GROUP = 2;
+    SYSTEM = 3;
+    ASSISTANT = 4;
+    APPLICATION = 5;
+}
+//上行
+message Submit{
+  bytes to = 1;//接收者
+  Type type=2;//消息类型
+  bool notify = 3;//是否推送
+  bool offline = 4;//是否离线
+  bool history = 5;//是否保存历史消息
+  bytes payload = 6;//数据载荷
+  uint32 id = 7;//消息唯一标示：最大为65535，因protobuf不支持，故用uint32
+}
+
+message SubmitACK{
+    uint32 id = 1;//消息唯一标示：最大为65535，因protobuf不支持，故用uint32
+}
+
+
+
+
+message Deliver{
+  bytes sessionID=1;//会话ID
+  bytes from = 2;//发送者
+  bytes to = 3;//接收者
+  int64 timestamp=4;//时间戳
+  Type type=5;//消息类型
+  uint64 id = 6;//消息唯一标示,消息排序标识
+  bytes payload=7;//数据载荷
+  bool upgrade=8;//当前客户端版本不支持此消息，需升级后可见
+}
+
+
+message DeliverACK{
+    bytes sessionID=1;//会话ID
+    uint64 id = 2;//消息唯一标示
+}
+
+
+

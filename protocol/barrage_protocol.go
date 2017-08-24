@@ -131,16 +131,10 @@ type BarrageProtocol struct {
 }
 
 func NewBarrageProtocol() *BarrageProtocol {
-	pool = &sync.Pool{
-		New: func() interface{} {
-			return &Barrage{}
-		},
-	}
 	return &BarrageProtocol{}
 }
 
 func (b *BarrageProtocol) Encode(msg msg.Message, buf *queue.IOBuffer) error {
-	//pool.Put(msg)
 	return msg.Encode(buf)
 }
 

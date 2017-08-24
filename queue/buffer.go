@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"bytes"
 	"errors"
 	"strconv"
 	"sync/atomic"
@@ -86,12 +87,21 @@ func (b *IOBuffer) Read(n uint64) []byte {
 	return buffer
 }
 
+func (b *IOBuffer) ReadSlice(delim byte) ([]byte, int) {
+	if i := bytes.IndexByte(b.buf[b.rt:b.wt], delim); i > 0 {
+		bs := b.buf[b.rt : b.rt+uint64(i-1)]
+		b.Consume(uint64(i + 1))
+		return bs, i
+	}
+	return nil, -1
+}
+
 func (b *IOBuffer) Produce(size uint64) {
-	atomic.AddUint64(&b.wt,size)
+	atomic.AddUint64(&b.wt, size)
 }
 
 func (b *IOBuffer) Consume(size uint64) {
-	atomic.AddUint64(&b.rt,size)
+	atomic.AddUint64(&b.rt, size)
 }
 
 func (b *IOBuffer) GetReadSize() uint64 {

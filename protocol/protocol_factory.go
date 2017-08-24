@@ -18,6 +18,8 @@ func Instance() *ProtocolFactory {
 		}
 		pf.Register("mqtt", new(MqttProtocol))
 		pf.Register("barrage", NewBarrageProtocol())
+		pf.Register("http", new(HttpProtocol))
+		pf.Register("ping", new(PingProtocol))
 	})
 	return pf
 }
