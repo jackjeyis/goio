@@ -8,21 +8,18 @@ import (
 
 type PingHeader struct {
 	Op  byte
-	Ver byte
 	Len int32
 }
 
 func (p *PingHeader) Decode(buf *queue.IOBuffer) error {
 	temp := buf.Read(uint64(1))
 	p.Op = temp[0] & 0xf0
-	p.Ver = temp[0] & 0xf
 	p.Len = decodeLength(buf)
 	return nil
 }
 
 func (p *PingHeader) Encode(buf *queue.ByteBuffer) {
 	p.Op = p.Op << 4
-	p.Op |= p.Ver
 	buf.WriteByte(p.Op)
 	encodeLength(buf, p.Len)
 }

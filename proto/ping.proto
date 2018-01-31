@@ -1,9 +1,18 @@
 syntax = "proto3";
+
+package im.v1;
+
+enum OsType{
+    ANDROID = 0;//安卓
+    IOS = 1; //苹果
+    PC = 2;//PC
+}
 message Connect{
-    int32 keepAlive=1;//心跳超时
+    uint32 keepAlive=1;//心跳超时
     bytes token=2;//用户身份验证
-    bool loginType=3;//登陆类型：主动或者自动
-    bytes clientID=4;//客户端唯一标示
+    string clientid=3;//客户端唯一标示
+    uint32 version=4;//当前版本号；服务端会有一个支持的最小版本号，目前计划最多支持四个版本
+    OsType os = 5;//客户端操作系统类型
 }
 
 enum ConnAckCode{
@@ -13,61 +22,192 @@ enum ConnAckCode{
     TOKEN_EXPIRY  = 3;//token失效
     LOGINED = 4;//已在其他设备登录
     UPGRADE = 5;//客户端需强制升级
+    REPLACESERVER =6;//从新请求PUSH地址
 }
-message Session{
-    int32 id= 1; //会话序号
-    bytes sessionid=2;//会话标识
-    int32 msgSize = 3;//会话未读消息数
-    map<int32,Deliver> delivers =4;//消息字典 ps:deliver结构体见2.6
-}
-message ConnACK{
+message ConnAck{
     ConnAckCode ackCode=1;//响应码
-    map<int32,Session> sessions =2;//会话字典
 }
 
+message SyncSession{
+    string sessionid=1;//会话标识
+    int32 msgTotal = 2;//会话总未读消息数
+    map<int32,Deliver> delivers =3;//消息字典 ps:deliver结构体见2.6
+}
 
-enum Type{
-    Type_UNDEFINED = 0;
-    SINGLE = 1;
-    GROUP = 2;
-    SYSTEM = 3;
-    ASSISTANT = 4;
-    APPLICATION = 5;
+message SyncSessionAck{
+    string sessionid=1;//会话标识
+}
+
+enum UserType{
+    NATURAL=0;//自然人
+    SYSTEM = 1;//系统用户
+    ASSISTANT = 2;//公众号
+    APPLICATION = 3;//助手号
+}
+
+enum MsgType{
+    SINGLE = 0;//单聊
+    GROUP = 1;//群聊
 }
 //上行
 message Submit{
-  bytes to = 1;//接收者
-  Type type=2;//消息类型
-  bool notify = 3;//是否推送
-  bool offline = 4;//是否离线
-  bool history = 5;//是否保存历史消息
-  bytes payload = 6;//数据载荷
-  uint32 id = 7;//消息唯一标示：最大为65535，因protobuf不支持，故用uint32
+  string to = 1;//接收者
+  UserType toType=2;//接收者类型
+  MsgType msgType=3;//消息类型
+  bool notify = 4;//是否推送
+  bool offline = 5;//是否离线
+  bool history = 6;//是否保存历史消息
+  bytes payload = 7;//数据载荷
+  uint32 id = 8;//消息唯一标示：最大为65535，因protobuf不支持，故用uint32
+  repeated string ats=9;//群消息，@列表
+  bool isatall=10;//群消息，是否是@all
 }
 
-message SubmitACK{
+message SubmitAck{
     uint32 id = 1;//消息唯一标示：最大为65535，因protobuf不支持，故用uint32
+    string sessionid=2;//会话ID
+    uint64 seq=3;//消息在会话中的序列
+    uint64 timestamp=4;//服务器时间戳
 }
-
-
-
 
 message Deliver{
-  bytes sessionID=1;//会话ID
-  bytes from = 2;//发送者
-  bytes to = 3;//接收者
-  int64 timestamp=4;//时间戳
-  Type type=5;//消息类型
-  uint64 id = 6;//消息唯一标示,消息排序标识
-  bytes payload=7;//数据载荷
-  bool upgrade=8;//当前客户端版本不支持此消息，需升级后可见
+  string sessionID=1;//会话ID
+  string from = 2;//发送者
+  UserType fromType=3;//发送者类型
+  string to = 4;//接收者
+  uint64 timestamp=5;//时间戳
+  MsgType msgType=6;//消息类型
+  uint64 seq = 7;//消息在会话中的唯一序列
+  bytes payload=8;//数据载荷
+  bool upgrade=9;//当前客户端版本不支持此消息，需升级后可见
+}
+
+message DeliverAck{
+    string sessionID=1;//会话ID
+    uint64 seq = 2;//消息在会话中的唯一序列
 }
 
 
-message DeliverACK{
-    bytes sessionID=1;//会话ID
-    uint64 id = 2;//消息唯一标示
+//连接RPC请求包
+message ConnectRequest{
+  Connect connect=1;//用户数据包
+  string serverid=2;//客户端server标志
+}
+//连接RPC响应包
+message ConnectResponse{
+  ConnAck ack = 1;//登录结果
+  string userid=2;//登录用户ID
+  map<uint64,string> sessions =3;//返回会话列表,key:seq value:sessionid
 }
 
+message SyncSessionRequest{
+  bytes syncSession = 1;//数据包
+  string userid=2;//登录用户ID
+  string clientid=3;//接收的客户端标志
+}
+
+message SyncSessionResponse{
+  bool ret=1;//结果
+  string msg = 2;//原因
+}
+
+//message SyncSessionAckRequest{
+//  uint64 userid=1;//登录用户ID
+//  bytes clientid=2;//客户端标志
+//}
+
+//message SyncSessionAckResponse{
+  
+//}
 
 
+//message SyncCfmRequest{
+//  
+//}
+
+//message SyncCfmResponse{
+//  
+//}
+
+message SubmitRequest{
+  Submit submit=1;//用户发送数据
+  string userid=2;//用户ID
+  string clientid=3;//设备ID
+}
+
+message SubmitResponse{
+  bool ret = 1;//结果
+  string msg = 2;//原因
+  string sessionid=3;//会话ID
+  uint64 seq=4;//消息在会话中的序列
+  uint64 timestamp=5;//服务器时间戳
+}
+
+message DeliverRequest{
+  string userid=1;//用户ID
+  string clientid=2;//设备ID
+  string sessionid=3;//会话ID
+  uint64 seq = 4;//消息在会话中的唯一序列
+  bytes deliverBody=5;
+}
+
+message DeliverResponse{
+  bool ret = 1;//结果
+  string msg = 2;//原因
+}
+
+message SeqModifyRequest{
+  string userid=1;//用户ID
+  string clientid=2;//设备ID
+  uint64 seq = 3;//消息在会话中的唯一序列
+}
+
+message SeqModifyResponse{
+  bool ret=1;//下行消息响应调用结果
+  string msg = 2;//原因
+}
+
+message DisconnectActiveRequest{
+  string userid=1;//用户ID
+  string clientid=2;//设备ID
+}
+
+message DisconnectActiveResponse{
+  bool ret=1;//主动断链结果
+  string msg = 2;//原因
+}
+
+message DisconnectForceRequest{
+  string userid=1;//用户ID
+  string clientid=2;//设备ID
+}
+
+message DisconnectForceResponse{
+  bool ret=1;//强制断链结果
+  string msg = 2;//原因
+}
+
+message HeartBeatRequest{
+  string userid=1;//用户ID
+  string clientid=2;//设备ID
+}
+
+message HeartBeatResponse{
+  bool ret=1;//心跳响应
+  string msg = 2;//原因
+}
+
+message RouterProto {
+  string userid=1;
+  map<string,string> cs=2;
+}
+
+message NotifyRequest {
+  string userid=1;
+  bytes payload=2;
+}
+
+message NotifyResponse {
+  bool code=1;
+  string msg=2;
+}

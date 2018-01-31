@@ -4,5 +4,5 @@ import "goio/client"
 
 func main() {
 	c := client.NewClient()
-	c.Connect("127.0.0.1:18080")
+	c.Connect("172.16.6.144:10001")
 }

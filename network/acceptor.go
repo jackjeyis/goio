@@ -45,6 +45,25 @@ func (a *Acceptor) Start() {
 		return
 	}
 
+	/*poller, _ := netpoll.New(nil)
+
+	wp := &pool.WorkerPool{
+		MaxWorkersCount: 1000,
+	}
+
+	acceptDesc := netpoll.Must(netpoll.HandleListener(
+		a.ln, netpoll.EventRead|netpoll.EventOneShot,
+	))
+
+	//accept := make(chan error, 1)
+	poller.Start(acceptDesc, func(e netpoll.Event) {
+		wp.ScheduleTimeout(time.Millisecond, func() {
+			conn, err := a.ln.AcceptTCP()
+			logger.Info("connected %v, err %v", conn, err)
+		})
+		poller.Resume(acceptDesc)
+	})
+	*/
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go acceptTCP(a)
 	}

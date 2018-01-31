@@ -33,15 +33,15 @@ func (c *Client) Connect(addr string) {
 	ping := &protocol.PingProtocol{}
 	msg := &protocol.PingPackage{}
 	header := protocol.PingHeader{
-		Op:  1,
-		Ver: 0,
+		Op: 1,
 	}
 
 	connect := &proto.Connect{
 		KeepAlive: 2,
 		Token:     []byte{'a'},
-		LoginType: false,
-		ClientID:  []byte{'i'},
+		Version:   1,
+		Os:        proto.OsType_IOS,
+		Clientid:  "iOS/213124",
 	}
 	data, err := pb.Marshal(connect)
 	if err != nil {
@@ -50,5 +50,10 @@ func (c *Client) Connect(addr string) {
 	msg.PingHeader = header
 	msg.Body = data
 	ping.Encode(msg, c.buf)
-	c.conn.Write(c.buf.Buffer()[c.buf.GetRead():c.buf.GetWrite()])
+	b := c.buf.Buffer()[c.buf.GetRead():c.buf.GetWrite()]
+	c.conn.Write(b)
+	go func() {
+
+	}()
+	select {}
 }

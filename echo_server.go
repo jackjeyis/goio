@@ -16,8 +16,6 @@ import (
 	"time"
 
 	pb "github.com/golang/protobuf/proto"
-
-	"github.com/samuel/go-zookeeper/zk"
 	//"github.com/stackimpact/stackimpact-go"
 )
 
@@ -87,10 +85,32 @@ func main() {
 			logger.Info("http req %v", msg)
 		})
 		app.RegisterService("ping_handler", func(msg msg.Message) {
+			logger.Info("handle msg %v", msg)
 			ping := msg.(*protocol.PingPackage)
-			connect := &proto.Connect{}
-			pb.Unmarshal(ping.Body, connect)
-			logger.Info("connect %v", connect)
+			switch ping.PingHeader.Op {
+			case 1:
+				connect := &proto.Connect{}
+				pb.Unmarshal(ping.Body, connect)
+				logger.Info("connect %v", connect)
+				/*ct := logic.NewLogicClient("logic", client.DefaultClient)
+				rsp := &proto.ConnACK{}
+				ct.Connect(context.Background(), connect, rsp)
+				if err != nil {
+					logger.Error(err)
+					return
+				}
+
+				body, err := pb.Marshal(rsp)
+				ping.PingHeader.Op = 2
+				ping.Body = body
+				ping.Channel().EncodeMessage(ping)
+				*/
+			case 3:
+				submit := &proto.Submit{}
+				pb.Unmarshal(ping.Body, submit)
+				logger.Info("submit %v", submit)
+			}
+
 		})
 		app.RegisterService("barrage_handler", func(msg msg.Message) {
 			barrage := msg.(*protocol.Barrage)
@@ -168,7 +188,7 @@ func main() {
 				barrage.Channel().SetAttr("ct", util.GetClientType(auth.Cid))
 				network.Register(auth.Cid, barrage.Channel(), res.Data.Role)
 				barrage.Channel().EncodeMessage(barrage)
-				go network.NotifyHost(auth.Rid, auth.Cid, res.Data.UserId, 1)
+				network.NotifyHost(auth.Rid, auth.Cid, res.Data.UserId, 1)
 			}
 			switch barrage.Op {
 			case 2:
@@ -176,7 +196,7 @@ func main() {
 				barrage.Channel().SetDeadline(240)
 				barrage.Channel().EncodeMessage(barrage)
 			case 4:
-				go network.BroadcastRoom(*barrage, true)
+				network.BroadcastRoom(*barrage, true)
 			}
 		})
 
@@ -203,7 +223,7 @@ func main() {
 			}
 		}()
 
-		go func() {
+		/*go func() {
 			c, ev, err := zk.Connect(util.GetZkConfig().Addrs, util.GetZkConfig().Timeout.Duration)
 			if err != nil {
 				logger.Error("zk.Connect (\"%v\") error (%v)", util.GetZkConfig().Addrs, err)
@@ -246,6 +266,7 @@ func main() {
 				}
 			}(ev)
 		}()
+		*/
 
 		return nil
 	}).Run()
