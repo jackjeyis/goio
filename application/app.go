@@ -22,6 +22,8 @@ var (
 	app_config   = flag.String("c", ".", "app config")
 	log_config   = flag.String("l", ".", "log config")
 	ip_mode      = flag.Bool("i", false, "ip address")
+	//prefork  = flag.Bool("prefork", false, "use prefork")
+	child    = flag.Bool("child", false, "is child proc")
 )
 
 type DelegateFunc func() error

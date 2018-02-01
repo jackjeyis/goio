@@ -10,7 +10,6 @@ import (
 	"goio/protocol"
 	"goio/util"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -200,7 +199,7 @@ func main() {
 			}
 		})
 
-		go func() {
+		/*go func() {
 			httpServeMux := http.NewServeMux()
 			httpServeMux.HandleFunc("/1/push/room", PushRoom)
 			httpServeMux.HandleFunc("/1/get/room", GetRoom)
@@ -222,7 +221,7 @@ func main() {
 				panic(err)
 			}
 		}()
-
+		*/
 		/*go func() {
 			c, ev, err := zk.Connect(util.GetZkConfig().Addrs, util.GetZkConfig().Timeout.Duration)
 			if err != nil {
